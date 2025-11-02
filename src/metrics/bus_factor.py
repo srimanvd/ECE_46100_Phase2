@@ -1,6 +1,7 @@
 from __future__ import annotations
-import time, math
-from typing import Dict, Tuple, List
+
+import math
+import time
 from collections import Counter
 
 try:
@@ -9,7 +10,7 @@ except ImportError:
     Repo = None  # gracefully handle missing GitPython
 
 
-def compute_bus_factor_from_commits(commits: List[str]) -> float:
+def compute_bus_factor_from_commits(commits: list[str]) -> float:
     """Entropy-based bus factor calculation from a list of commit authors."""
     if not commits:
         return 0.0
@@ -28,7 +29,7 @@ def compute_bus_factor_from_commits(commits: List[str]) -> float:
     return entropy / math.log2(num_contributors)
 
 
-def compute_bus_factor(commits: List[str]) -> Tuple[float, int]:
+def compute_bus_factor(commits: list[str]) -> tuple[float, int]:
     """
     Backward-compatible function used in tests.
     Returns (score ∈ [0,1], latency_ms).
@@ -39,14 +40,14 @@ def compute_bus_factor(commits: List[str]) -> Tuple[float, int]:
     return score, latency_ms
 
 
-def metric(resource: Dict) -> Tuple[float, int]:
+def metric(resource: dict) -> tuple[float, int]:
     """
     Bus Factor metric:
     - Extract authors from the cloned repo at resource['local_path'] or ['local_dir'].
     - Return (score ∈ [0,1], latency_ms).
     """
     start = time.perf_counter()
-    commits: List[str] = []
+    commits: list[str] = []
 
     repo_path = resource.get("local_path") or resource.get("local_dir")
     if repo_path and Repo is not None:

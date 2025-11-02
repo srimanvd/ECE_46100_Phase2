@@ -1,5 +1,6 @@
 from pathlib import Path
-from src.metrics.license import metric, heuristic_license_score
+
+from src.metrics.license import heuristic_license_score, metric
 
 
 def test_heuristic_mit(tmp_path: Path):

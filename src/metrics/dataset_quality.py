@@ -1,8 +1,9 @@
-import time
 import logging
-from typing import Any, Dict, Tuple, List
+import time
+from typing import Any
 
 from huggingface_hub import dataset_info
+
 from src.utils.dataset_link_finder import find_datasets_from_resource
 
 logger = logging.getLogger("phase1_cli")
@@ -48,10 +49,12 @@ def find_dataset_url_from_hf(model_name: str) -> str | None:
     resource = {"name": model_name, "url": f"https://huggingface.co/{model_name}"}
     datasets, _ = find_datasets_from_resource(resource)
     return datasets[0] if datasets else None
+
+
 # ---------------------------------------------------------------------
 
 
-def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
+def metric(resource: dict[str, Any]) -> tuple[float, int]:
     """
     Calculates a dataset quality score by finding linked dataset(s)
     and assessing their metadata on the Hugging Face Hub.
@@ -63,7 +66,7 @@ def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
 
     if datasets:
         # Score all found datasets and take the max (best-case quality)
-        dataset_ids: List[str] = [_extract_dataset_id(d) for d in datasets]
+        dataset_ids: list[str] = [_extract_dataset_id(d) for d in datasets]
         scores = [_score_dataset(ds_id) for ds_id in dataset_ids if ds_id]
         if scores:
             score = max(scores)

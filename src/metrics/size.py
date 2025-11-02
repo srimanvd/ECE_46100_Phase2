@@ -1,7 +1,7 @@
-from typing import Dict
 from huggingface_service import ModelMetadata
 
-def score_model_size(metadata: ModelMetadata) -> Dict[str, float]:
+
+def score_model_size(metadata: ModelMetadata) -> dict[str, float]:
     """Return size compatibility scores per hardware type (0–1)."""
     size_mb = metadata.modelSize / (1024 * 1024)  # MB
     size_gb = size_mb / 1024
@@ -15,8 +15,8 @@ def score_model_size(metadata: ModelMetadata) -> Dict[str, float]:
         return 1 - ((value - min_val) / (max_val - min_val))
 
     return {
-        "raspberry_pi": normalize(size_gb, 0.0, 1.0),   # best <1GB
-        "jetson_nano": normalize(size_gb, 0.0, 2.0),   # best <2GB
-        "desktop_pc": normalize(size_gb, 0.0, 6.0),    # best <6GB
-        "aws_server": normalize(size_gb, 0.0, 10.0),   # best <10GB
+        "raspberry_pi": normalize(size_gb, 0.0, 1.0),  # best <1GB
+        "jetson_nano": normalize(size_gb, 0.0, 2.0),  # best <2GB
+        "desktop_pc": normalize(size_gb, 0.0, 6.0),  # best <6GB
+        "aws_server": normalize(size_gb, 0.0, 10.0),  # best <10GB
     }

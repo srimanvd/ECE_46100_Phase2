@@ -1,4 +1,5 @@
 import pytest
+
 from src.metrics.bus_factor import compute_bus_factor
 
 

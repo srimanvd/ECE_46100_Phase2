@@ -1,6 +1,7 @@
-from huggingface_hub import HfApi, hf_api
 from datetime import datetime
-from typing import List, Optional
+
+from huggingface_hub import HfApi, hf_api
+
 from src.utils.logging import logger
 
 
@@ -16,7 +17,7 @@ class ModelMetadata:
         downloads: int,
         likes: int,
         last_modified: datetime,
-        files: List[str],
+        files: list[str],
     ):
         self.modelName = name
         self.modelCategory = category
@@ -46,18 +47,20 @@ class ModelMetadata:
 class HuggingFaceService:
     """Wrapper around the Hugging Face API to fetch model information."""
 
-    def __init__(self, token: Optional[str] = None):
+    def __init__(self, token: str | None = None):
         try:
             self.api = HfApi(token=token)
             # You can optionally add a login check to validate the token immediately
             if token:
                 self.api.whoami()
         except Exception as e:
-            logger.error(f"Failed to initialize HuggingFaceService, possibly due to an invalid token: {e}")
+            logger.error(
+                f"Failed to initialize HuggingFaceService, possibly due to an invalid token: {e}"
+            )
             # Set api to None so the service fails gracefully later
             self.api = None
 
-    def fetch_model_metadata(self, model_id: str) -> Optional[ModelMetadata]:
+    def fetch_model_metadata(self, model_id: str) -> ModelMetadata | None:
         """Fetch metadata for a given model ID from Hugging Face Hub.
 
         Returns:
@@ -65,10 +68,10 @@ class HuggingFaceService:
         """
         try:
             info = self.api.model_info(model_id)
-        except hf_api.HfHubHTTPError as e:
+        except hf_api.HfHubHTTPError:
             # print(f"❌ Error: Could not fetch model '{model_id}' — {e}")
             return None
-        except Exception as e:
+        except Exception:
             # print(f"❌ Unexpected error: {e}")
             return None
 
@@ -79,9 +82,15 @@ class HuggingFaceService:
         size = getattr(info, "usedStorage", 0) or 0
 
         # License might be a property or in cardData
-        license_str = getattr(info, "license", None) or (
-            info.cardData.get("license") if hasattr(info, "cardData") and info.cardData else None
-        ) or "unspecified"
+        license_str = (
+            getattr(info, "license", None)
+            or (
+                info.cardData.get("license")
+                if hasattr(info, "cardData") and info.cardData
+                else None
+            )
+            or "unspecified"
+        )
 
         downloads = getattr(info, "downloads", 0) or 0
         likes = getattr(info, "likes", 0) or 0
@@ -98,14 +107,14 @@ class HuggingFaceService:
             last_modified=last_modified,
             files=files,
         )
+
     def get_raw_model_info(self, model_id: str):
         """Return the raw ModelInfo object from huggingface_hub (or None on failure)."""
         try:
             return self.api.model_info(model_id)
-        except Exception as e:
+        except Exception:
             # print(f"Could not fetch raw model info for '{model_id}': {e}")
             return None
-        
 
 
 # -------------------------

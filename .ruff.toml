@@ -1,6 +1,17 @@
+# ruff.toml
 target-version = "py311"
 line-length = 100
+
+exclude = ["old-README.md"]
+
+[lint]
+# keep it focused but useful
 select = ["E", "F", "I", "B", "UP"]
-ignore = [
-  "E501",  # do not fail on long lines right now
-]
+fixable = ["ALL"]
+ignore = ["E501"]
+
+[lint.per-file-ignores]
+"run" = ["E402"]
+"run.py" = ["E402"]
+"tests/**" = ["E501", "E402"]
+"src/__init__.py" = ["F401"]

@@ -16,13 +16,14 @@ Notes:
     otherwise it will try resource['url'] + README (best-effort).
   - Returns a float in [0,1] and the latency in integer milliseconds.
 """
+
 from __future__ import annotations
 
 import json
 import os
 import re
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import requests  # add to requirements.txt
 
@@ -37,14 +38,16 @@ _API_KEY_ENV = "GEN_AI_STUDIO_API_KEY"
 # -----------------------
 # Helpers: file reading
 # -----------------------
-def _read_local_file(local_dir: str, names=("LICENSE", "LICENSE.txt", "LICENSE.md", "README.md")) -> Optional[str]:
+def _read_local_file(
+    local_dir: str, names=("LICENSE", "LICENSE.txt", "LICENSE.md", "README.md")
+) -> str | None:
     if not local_dir:
         return None
     for name in names:
         path = os.path.join(local_dir, name)
         if os.path.isfile(path):
             try:
-                with open(path, "r", encoding="utf-8", errors="replace") as fh:
+                with open(path, encoding="utf-8", errors="replace") as fh:
                     return fh.read()
             except Exception:
                 continue
@@ -58,13 +61,14 @@ _LICENSE_KEYWORDS = {
     "mit": ("MIT", 1.0),
     "apache": ("Apache-2.0", 0.95),
     "bsd": ("BSD", 0.9),
-    "lgpl": ("LGPL", 0.6),   # moved above gpl
+    "lgpl": ("LGPL", 0.6),  # moved above gpl
     "gpl": ("GPL", 0.4),
     "mozilla": ("MPL", 0.8),
     "proprietary": ("Proprietary", 0.0),
 }
 
-def heuristic_license_score(text: str) -> Tuple[float, str, str]:
+
+def heuristic_license_score(text: str) -> tuple[float, str, str]:
     if not text:
         return 0.0, "NO_LICENSE_DETECTED", "missing"
     low = text.lower()
@@ -103,8 +107,13 @@ def _build_prompt_for_license(text: str) -> str:
     )
 
 
-def _call_purdue_genai(prompt: str, model: str = _DEFAULT_MODEL, endpoint: str = _DEFAULT_ENDPOINT,
-                       api_key: Optional[str] = None, timeout: int = 20) -> Dict[str, Any]:
+def _call_purdue_genai(
+    prompt: str,
+    model: str = _DEFAULT_MODEL,
+    endpoint: str = _DEFAULT_ENDPOINT,
+    api_key: str | None = None,
+    timeout: int = 20,
+) -> dict[str, Any]:
     """
     Call Purdue GenAI Studio chat completions endpoint in an OpenAI-compatible way.
     Returns the parsed JSON response body (the whole response) or raises Exception on failure.
@@ -120,9 +129,7 @@ def _call_purdue_genai(prompt: str, model: str = _DEFAULT_MODEL, endpoint: str =
 
     body = {
         "model": model,
-        "messages": [
-            {"role": "user", "content": prompt}
-        ],
+        "messages": [{"role": "user", "content": prompt}],
         "stream": False,
     }
 
@@ -133,7 +140,7 @@ def _call_purdue_genai(prompt: str, model: str = _DEFAULT_MODEL, endpoint: str =
     return resp.json()
 
 
-def _extract_json_from_assistant(content: str) -> Optional[Dict[str, Any]]:
+def _extract_json_from_assistant(content: str) -> dict[str, Any] | None:
     """
     Attempt to find a JSON object inside the assistant message. We try to be forgiving.
     """
@@ -161,7 +168,7 @@ def _extract_json_from_assistant(content: str) -> Optional[Dict[str, Any]]:
 # -----------------------
 # Public metric API
 # -----------------------
-def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
+def metric(resource: dict[str, Any]) -> tuple[float, int]:
     """
     Compute license compatibility score for a given resource.
     Input 'resource' keys used:
@@ -175,10 +182,14 @@ def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
     local_dir = resource.get("local_dir") or resource.get("local_path") or None
     text = None
     if local_dir:
-        text = _read_local_file(local_dir, names=("LICENSE", "LICENSE.txt", "LICENSE.md", "LICENSE.rst"))
+        text = _read_local_file(
+            local_dir, names=("LICENSE", "LICENSE.txt", "LICENSE.md", "LICENSE.rst")
+        )
     # fallback to README if no license
     if not text and local_dir:
-        text = _read_local_file(local_dir, names=("README.md", "README.rst", "README.txt", "README"))
+        text = _read_local_file(
+            local_dir, names=("README.md", "README.rst", "README.txt", "README")
+        )
     # if still nothing, optionally we could attempt remote read (omitted here for determinism)
     if not text:
         # fallback to resource 'url' presence (we choose not to fetch network READMEs here)
@@ -191,9 +202,13 @@ def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
         # build prompt and call LLM
         prompt = _build_prompt_for_license(text if text else "No license text found.")
         try:
-            resp_json = _call_purdue_genai(prompt, model=os.environ.get("PURDUE_GENAI_MODEL", _DEFAULT_MODEL),
-                                           endpoint=os.environ.get("PURDUE_GENAI_ENDPOINT", _DEFAULT_ENDPOINT),
-                                           api_key=api_key, timeout=25)
+            resp_json = _call_purdue_genai(
+                prompt,
+                model=os.environ.get("PURDUE_GENAI_MODEL", _DEFAULT_MODEL),
+                endpoint=os.environ.get("PURDUE_GENAI_ENDPOINT", _DEFAULT_ENDPOINT),
+                api_key=api_key,
+                timeout=25,
+            )
             # Parse assistant content. Response structure expected to follow chat completion
             # Example: resp_json['choices'][0]['message']['content'] or resp_json['choices'][0]['text']
             assistant_content = None
@@ -211,7 +226,7 @@ def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
                     # expected fields: compatibility_score (0.0-1.0), license_spdx, category, explanation
                     score = parsed.get("compatibility_score")
                     # normalize / validate
-                    if isinstance(score, (int, float)):
+                    if isinstance(score, (int | float)):
                         scoref = float(score)
                         if scoref < 0.0:
                             scoref = 0.0

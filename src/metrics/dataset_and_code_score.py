@@ -1,6 +1,6 @@
-import time
 import logging
-from typing import Any, Dict, Tuple
+import time
+from typing import Any
 
 from src.utils.dataset_link_finder import find_datasets_from_resource
 from src.utils.github_link_finder import find_github_url_from_hf
@@ -19,16 +19,18 @@ def find_dataset_url_from_hf(model_name: str) -> str | None:
     resource = {"name": model_name, "url": f"https://huggingface.co/{model_name}"}
     datasets, _ = find_datasets_from_resource(resource)
     return datasets[0] if datasets else None
+
+
 # ---------------------------------------------------------------------
 
 
-def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
+def metric(resource: dict[str, Any]) -> tuple[float, int]:
     """
     Calculates a score based on the successful discovery of both a linked
     dataset and a linked code repository from a model's card.
 
     Returns:
-        score (float): 
+        score (float):
             - 1.0 if both dataset(s) and GitHub repo are found
             - 0.5 if only one is found
             - 0.0 if neither are found

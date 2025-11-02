@@ -1,8 +1,9 @@
 import time
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any
 
-def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
+
+def metric(resource: dict[str, Any]) -> tuple[float, int]:
     """
     Calculates a code quality score based on the presence of key
     repository files and directories in a pre-cloned local path.
@@ -17,7 +18,8 @@ def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
     if local_repo_path:
         repo_path = Path(local_repo_path)
         checks = {
-            "dependencies": (repo_path / "requirements.txt").exists() or (repo_path / "pyproject.toml").exists(),
+            "dependencies": (repo_path / "requirements.txt").exists()
+            or (repo_path / "pyproject.toml").exists(),
             "testing": (repo_path / "tests").is_dir(),
             "ci_cd": (repo_path / ".github").is_dir() or (repo_path / ".gitlab-ci.yml").exists(),
             "containerization": (repo_path / "Dockerfile").exists(),

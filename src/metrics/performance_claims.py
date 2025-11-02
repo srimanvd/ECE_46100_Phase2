@@ -1,8 +1,10 @@
 from __future__ import annotations
+
+import logging
+
 # Imports from standard Python libraries
 import time
-import logging
-from typing import Any, Dict, Tuple
+from typing import Any
 
 # Import the specific functions we need from the huggingface_hub library
 from huggingface_hub import model_info
@@ -15,7 +17,7 @@ logger = logging.getLogger("phase1_cli")
 # The 'metric' function is the required entry point for all metric files.
 # It takes a 'resource' dictionary (containing URL, name, etc.)
 # and must return a tuple containing a float (the score) and an int (the latency).
-def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
+def metric(resource: dict[str, Any]) -> tuple[float, int]:
     """
     Calculates a score based on the model's popularity on the Hugging Face Hub,
     primarily using its download count.
@@ -39,7 +41,7 @@ def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
         downloads = info.downloads or 0
         # This log message is useful for debugging. It will only show up if LOG_LEVEL is 2.
         logger.debug(f"Successfully fetched info for {repo_id}. Downloads: {downloads}")
-        
+
         # --- Scoring Logic ---
         # Convert the raw download number into a score between 0.0 and 1.0.
         # This simple tiered system assigns higher scores to more popular models.
@@ -70,6 +72,6 @@ def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
     end_time = time.perf_counter()
     # Calculate the total time taken in milliseconds.
     latency_ms = int((end_time - start_time) * 1000)
-    
+
     # Return the final score and the calculated latency.
     return score, latency_ms

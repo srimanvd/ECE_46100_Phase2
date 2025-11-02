@@ -1,9 +1,11 @@
-import tempfile
-import shutil
 import logging
-from git import Repo, GitCommandError
+import shutil
+import tempfile
+
+from git import GitCommandError, Repo
 
 logger = logging.getLogger("phase1_cli")
+
 
 def clone_repo_to_temp(repo_url: str) -> str | None:
     """

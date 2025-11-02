@@ -1,8 +1,10 @@
 import logging
-from huggingface_hub import hf_hub_download
+
 from bs4 import BeautifulSoup
+from huggingface_hub import hf_hub_download
 
 logger = logging.getLogger("phase1_cli")
+
 
 def find_github_url_from_hf(repo_id: str) -> str | None:
     """
@@ -11,7 +13,7 @@ def find_github_url_from_hf(repo_id: str) -> str | None:
     try:
         # Download the README file from the Hugging Face Hub
         readme_path = hf_hub_download(repo_id=repo_id, filename="README.md")
-        with open(readme_path, "r", encoding="utf-8") as f:
+        with open(readme_path, encoding="utf-8") as f:
             content = f.read()
 
         # Use BeautifulSoup to parse the HTML/Markdown content

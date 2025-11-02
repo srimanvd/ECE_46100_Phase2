@@ -1,36 +1,45 @@
 import unittest
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
-from typing import Dict, Any, List, Optional
 
 # --- Copy of the required classes from huggingface_service.py ---
+
 
 # Mock the logger and the external Hugging Face components we need to import
 # These classes are defined here but are not used below since the tests
 # that rely on them (TestHuggingFaceService) are being removed.
 class MockHfApi:
     """Mock class for huggingface_hub.HfApi."""
+
     def __init__(self, token=None):
         pass
+
     def whoami(self):
         # Mock successful login validation
         return {"name": "test-user"}
+
     def model_info(self, model_id):
         # This will be overridden per test case
         raise NotImplementedError("model_info mock must be set by test.")
 
+
 class MockHfHubHTTPError(Exception):
     """Mock class for hf_api.HfHubHTTPError."""
+
     pass
+
 
 class MockLogger:
     """Mock class for src.utils.logging.logger."""
+
     def error(self, msg):
-        pass # Do nothing, just record the call if needed
+        pass  # Do nothing, just record the call if needed
+
     def info(self, msg):
         pass
 
+
 # The patch_imports definition is removed as it was only used for the failing test class.
+
 
 # Re-defining the classes for testing purposes
 class ModelMetadata:
@@ -45,7 +54,7 @@ class ModelMetadata:
         downloads: int,
         likes: int,
         last_modified: datetime,
-        files: List[str],
+        files: list[str],
     ):
         self.modelName = name
         self.modelCategory = category
@@ -77,22 +86,25 @@ class ModelMetadata:
 class HuggingFaceService:
     """Wrapper around the Hugging Face API to fetch model information."""
 
-    def __init__(self, token: Optional[str] = None):
+    def __init__(self, token: str | None = None):
         # Use the mocked HfApi from the sys.modules patch
         from huggingface_hub import HfApi
-        from src.utils.logging import logger # Use the mocked logger
+
+        from src.utils.logging import logger  # Use the mocked logger
 
         try:
             self.api = HfApi(token=token)
             # You can optionally add a login check to validate the token immediately
             if token:
-                self.api.whoami() # Hits success path if HfApi works
+                self.api.whoami()  # Hits success path if HfApi works
         except Exception as e:
-            logger.error(f"Failed to initialize HuggingFaceService, possibly due to an invalid token: {e}")
+            logger.error(
+                f"Failed to initialize HuggingFaceService, possibly due to an invalid token: {e}"
+            )
             # Hits failure path, sets api to None
             self.api = None
 
-    def fetch_model_metadata(self, model_id: str) -> Optional[ModelMetadata]:
+    def fetch_model_metadata(self, model_id: str) -> ModelMetadata | None:
         """Fetch metadata for a given model ID from Hugging Face Hub.
 
         Returns:
@@ -106,23 +118,31 @@ class HuggingFaceService:
 
         try:
             info = self.api.model_info(model_id)
-        except hf_api.HfHubHTTPError as e:
+        except hf_api.HfHubHTTPError:
             # Hits HTTP error branch (e.g., 404 Not Found)
             return None
-        except Exception as e:
+        except Exception:
             # Hits unexpected error branch
             return None
 
         model_name = info.modelId
-        category = info.pipeline_tag if info.pipeline_tag else "unknown" # Covers both tag existence and non-existence
+        category = (
+            info.pipeline_tag if info.pipeline_tag else "unknown"
+        )  # Covers both tag existence and non-existence
 
         # ✅ Use usedStorage instead of summing siblings
         size = getattr(info, "usedStorage", 0) or 0
 
         # License might be a property or in cardData
-        license_str = getattr(info, "license", None) or (
-            info.cardData.get("license") if hasattr(info, "cardData") and info.cardData else None # Hits cardData path
-        ) or "unspecified" # Hits default 'unspecified' path
+        license_str = (
+            getattr(info, "license", None)
+            or (
+                info.cardData.get("license")
+                if hasattr(info, "cardData") and info.cardData
+                else None  # Hits cardData path
+            )
+            or "unspecified"
+        )  # Hits default 'unspecified' path
 
         downloads = getattr(info, "downloads", 0) or 0
         likes = getattr(info, "likes", 0) or 0
@@ -146,10 +166,12 @@ class HuggingFaceService:
             return None
 
         try:
-            return self.api.model_info(model_id) # Hits success path
-        except Exception as e:
+            return self.api.model_info(model_id)  # Hits success path
+        except Exception:
             # Hits unexpected error branch
             return None
+
+
 # ------------------------------------------------------------------
 
 
@@ -161,7 +183,7 @@ class TestModelMetadata(unittest.TestCase):
         self.metadata = ModelMetadata(
             name="test/model",
             category="text-generation",
-            size=5000000, # ~4.7 MB
+            size=5000000,  # ~4.7 MB
             license="MIT",
             downloads=1000,
             likes=50,

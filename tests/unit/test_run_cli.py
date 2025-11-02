@@ -2,7 +2,6 @@ import io
 import json
 import sys
 import types
-from pathlib import Path
 from unittest.mock import patch
 
 import run
@@ -31,7 +30,9 @@ def test_handle_install_and_test(monkeypatch, tmp_path):
 
     # patch subprocess for handle_test
     monkeypatch.setattr(run, "run_subprocess", lambda *a, **k: 0)
-    monkeypatch.setattr(run.subprocess, "run", lambda *a, **k: types.SimpleNamespace(stdout="..", returncode=0))
+    monkeypatch.setattr(
+        run.subprocess, "run", lambda *a, **k: types.SimpleNamespace(stdout="..", returncode=0)
+    )
     monkeypatch.setattr(run.importlib.util, "find_spec", lambda name: True)
 
     assert run.handle_test() == 0
@@ -52,15 +53,23 @@ def test_process_url_file_with_model(monkeypatch, tmp_path):
     urlfile.write_text(",,https://huggingface.co/google/bert-base-uncased\n")
 
     # patch compute_metrics_for_model
-    monkeypatch.setattr(run, "compute_metrics_for_model", lambda r: {"name": r["name"], "url": r["url"], "net_score": 1.0, "net_score_latency": 5})
+    monkeypatch.setattr(
+        run,
+        "compute_metrics_for_model",
+        lambda r: {"name": r["name"], "url": r["url"], "net_score": 1.0, "net_score_latency": 5},
+    )
 
     # patch clone_repo_to_temp in its real module
     fake_repo = tmp_path / "fake_repo"
     fake_repo.mkdir()
-    sys.modules["src.utils.repo_cloner"] = types.SimpleNamespace(clone_repo_to_temp=lambda url: str(fake_repo))
+    sys.modules["src.utils.repo_cloner"] = types.SimpleNamespace(
+        clone_repo_to_temp=lambda url: str(fake_repo)
+    )
 
     # patch find_github_url_from_hf
-    sys.modules["src.utils.github_link_finder"] = types.SimpleNamespace(find_github_url_from_hf=lambda name: "https://github.com/google/research")
+    sys.modules["src.utils.github_link_finder"] = types.SimpleNamespace(
+        find_github_url_from_hf=lambda name: "https://github.com/google/research"
+    )
 
     out = io.StringIO()
     monkeypatch.setattr(sys, "stdout", out)
@@ -84,7 +93,10 @@ def test_load_metrics_and_compute(monkeypatch):
         metrics = run.load_metrics()
         assert "fake_metric" in metrics
 
-    resource = {"url": "https://huggingface.co/google/bert-base-uncased", "name": "google/bert-base-uncased"}
+    resource = {
+        "url": "https://huggingface.co/google/bert-base-uncased",
+        "name": "google/bert-base-uncased",
+    }
     result = run.compute_metrics_for_model(resource)
     assert "net_score" in result
     assert isinstance(result["net_score_latency"], int)

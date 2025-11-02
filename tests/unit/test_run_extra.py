@@ -1,16 +1,18 @@
-import io
 import sys
-import run
 import types
-import builtins
-import tempfile
 from pathlib import Path
+
 import pytest
+
+import run
 
 
 def test_run_subprocess_exception(monkeypatch):
     """Covers run_subprocess when subprocess.run raises an exception."""
-    def fake_run(cmd, check=False): raise OSError("boom")
+
+    def fake_run(cmd, check=False):
+        raise OSError("boom")
+
     monkeypatch.setattr(run.subprocess, "run", fake_run)
     rc = run.run_subprocess(["echo", "hi"])
     assert rc == 1
@@ -46,11 +48,19 @@ def test_process_url_file_empty_and_invalid(tmp_path):
 
 def test_compute_metrics_category_and_error(monkeypatch):
     """Covers category metric special case and error in metric call."""
-    def fake_category_metric(res): return 0.5, 12
-    def fake_bad_metric(res): raise RuntimeError("fail")
 
-    monkeypatch.setitem(sys.modules, "src.metrics.category", types.SimpleNamespace(metric=fake_category_metric))
-    monkeypatch.setitem(sys.modules, "src.metrics.bad", types.SimpleNamespace(metric=fake_bad_metric))
+    def fake_category_metric(res):
+        return 0.5, 12
+
+    def fake_bad_metric(res):
+        raise RuntimeError("fail")
+
+    monkeypatch.setitem(
+        sys.modules, "src.metrics.category", types.SimpleNamespace(metric=fake_category_metric)
+    )
+    monkeypatch.setitem(
+        sys.modules, "src.metrics.bad", types.SimpleNamespace(metric=fake_bad_metric)
+    )
 
     def fake_iter_modules(*a, **k):
         return [(None, "src.metrics.category", False), (None, "src.metrics.bad", False)]
@@ -59,7 +69,9 @@ def test_compute_metrics_category_and_error(monkeypatch):
     metrics = run.load_metrics()
     assert "category" in metrics and "bad" in metrics
 
-    result = run.compute_metrics_for_model({"url": "https://huggingface.co/foo/bar", "name": "foo/bar"})
+    result = run.compute_metrics_for_model(
+        {"url": "https://huggingface.co/foo/bar", "name": "foo/bar"}
+    )
     assert "category_latency" in result
     assert result["bad"] == 0.0
 
@@ -72,11 +84,14 @@ def test_main_no_args(capsys):
     assert "usage:" in out.lower()
 
 
-@pytest.mark.parametrize("url,expected", [
-    (None, "CODE"),       # non-string
-    ("", "CODE"),         # empty
-    ("https://unknownsite.com/x", "CODE"),
-])
+@pytest.mark.parametrize(
+    "url,expected",
+    [
+        (None, "CODE"),  # non-string
+        ("", "CODE"),  # empty
+        ("https://unknownsite.com/x", "CODE"),
+    ],
+)
 def test_classify_url_edges(url, expected):
     assert run.classify_url(url) == expected
 

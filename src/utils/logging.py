@@ -1,7 +1,8 @@
 # File: src/utils/logging.py
+import logging
 import os
 import sys
-import logging
+
 
 def setup_logger():
     """
@@ -39,7 +40,7 @@ def setup_logger():
     if log_file and log_level_env > 0:
         try:
             # This will not crash if the path is invalid
-            handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
+            handler = logging.FileHandler(log_file, mode="w", encoding="utf-8")
         except Exception:
             # If the file path is invalid, fall back to console
             handler = logging.StreamHandler(sys.stderr)
@@ -53,6 +54,7 @@ def setup_logger():
         logger.addHandler(handler)
 
     return logger
+
 
 # Create a single logger instance that can be imported by other files
 logger = setup_logger()

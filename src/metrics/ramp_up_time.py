@@ -2,8 +2,8 @@
 # TEAM 4
 # PHASE 1 PROJECT
 
-#METRIC: ramp_up_time
-#REQUIREMENTS SATISFIED: latency score, ramp_up_time metric score
+# METRIC: ramp_up_time
+# REQUIREMENTS SATISFIED: latency score, ramp_up_time metric score
 
 # DISCLAIMER: This file contains code either partially or entirely written by
 # Artificial Intelligence
@@ -21,12 +21,14 @@ Scoring (total = 1.0):
  - Installation section keyword --> up to 0.35 (does the readme include installation/startup related keywords/headers?)
  - Code snippets (fenced or indented) --> up to 0.25 (are there any code snippets/examples included?)
 """
+
 from __future__ import annotations
 
 import os
 import re
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
+
 
 # Threshold-based length scoring (words -> score)
 def _length_score(word_count: int) -> float:
@@ -37,6 +39,7 @@ def _length_score(word_count: int) -> float:
     if 200 <= word_count <= 499:
         return 0.25
     return 0.4  # >= 500 words
+
 
 # Detect installation section by heading or common install phrases
 _INSTALL_RE = re.compile(
@@ -58,7 +61,7 @@ _CODE_FENCE_RE = re.compile(r"```")  # fenced blocks
 _INDENTED_CODE_RE = re.compile(r"(?m)^( {4}|\t).+")  # lines starting with 4 spaces or a tab
 
 
-def _read_local_readme(local_dir: str) -> Optional[str]:
+def _read_local_readme(local_dir: str) -> str | None:
     if not local_dir:
         return None
     candidates = ["README.md", "README.rst", "README.txt", "README"]
@@ -66,7 +69,7 @@ def _read_local_readme(local_dir: str) -> Optional[str]:
         p = os.path.join(local_dir, name)
         if os.path.isfile(p):
             try:
-                with open(p, "r", encoding="utf-8", errors="replace") as fh:
+                with open(p, encoding="utf-8", errors="replace") as fh:
                     return fh.read()
             except Exception:
                 # reading error -> skip to next candidate
@@ -74,7 +77,7 @@ def _read_local_readme(local_dir: str) -> Optional[str]:
     return None
 
 
-def _try_fetch_remote_readme(url: str, timeout: float = 6.0) -> Optional[str]:
+def _try_fetch_remote_readme(url: str, timeout: float = 6.0) -> str | None:
     """
     Best-effort attempt to fetch README over HTTP for common hosts (GitHub, Hugging Face).
     This is best-effort and optional — remote fetching is used only if requests is available.
@@ -150,7 +153,7 @@ def _has_code_snippet(content: str) -> bool:
     return False
 
 
-def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
+def metric(resource: dict[str, Any]) -> tuple[float, int]:
     """
     Compute ramp-up-time proxy score for a model resource.
 
@@ -163,7 +166,7 @@ def metric(resource: Dict[str, Any]) -> Tuple[float, int]:
     """
     t0 = time.perf_counter()
     try:
-        content: Optional[str] = None
+        content: str | None = None
 
         # 1) Prefer local README if present (fast and deterministic)
         local_dir = resource.get("local_dir") or resource.get("local_path") or None

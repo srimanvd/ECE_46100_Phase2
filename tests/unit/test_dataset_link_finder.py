@@ -1,9 +1,5 @@
 # tests/unit/test_dataset_link_finder.py
-import os
-import tempfile
 import pytest
-import types
-from pathlib import Path
 
 import src.utils.dataset_link_finder as dlf
 
@@ -28,26 +24,35 @@ def test_read_local_readme_error(monkeypatch, tmp_path):
 def test_fetch_url_text_success(monkeypatch):
     class FakeResp:
         text = "hi"
-        def raise_for_status(self): return None
+
+        def raise_for_status(self):
+            return None
+
     monkeypatch.setattr(dlf.requests, "get", lambda *a, **k: FakeResp())
     assert dlf._fetch_url_text("http://x") == "hi"
 
 
 def test_fetch_url_text_failure(monkeypatch):
-    def bad_get(*a, **k): raise OSError("boom")
+    def bad_get(*a, **k):
+        raise OSError("boom")
+
     monkeypatch.setattr(dlf.requests, "get", bad_get)
     assert dlf._fetch_url_text("http://x") is None
 
 
 def test_try_fetch_readme_from_repo_url_github(monkeypatch):
     # First branch succeeds
-    monkeypatch.setattr(dlf, "_fetch_url_text", lambda url, **k: "readme text" if "raw" in url else None)
+    monkeypatch.setattr(
+        dlf, "_fetch_url_text", lambda url, **k: "readme text" if "raw" in url else None
+    )
     content = dlf._try_fetch_readme_from_repo_url("https://github.com/org/repo")
     assert "readme" in content
 
 
 def test_try_fetch_readme_from_repo_url_hf(monkeypatch):
-    monkeypatch.setattr(dlf, "_fetch_url_text", lambda url, **k: "hf text" if "raw" in url else None)
+    monkeypatch.setattr(
+        dlf, "_fetch_url_text", lambda url, **k: "hf text" if "raw" in url else None
+    )
     content = dlf._try_fetch_readme_from_repo_url("https://huggingface.co/org/model")
     assert "hf" in content
 
@@ -81,19 +86,24 @@ def test_extract_urls_from_html_valid():
 def test_extract_urls_from_html_invalid(monkeypatch):
     # Force parser to throw
     class BadParser(dlf.HrefParser):
-        def feed(self, *a, **k): raise ValueError("bad")
+        def feed(self, *a, **k):
+            raise ValueError("bad")
+
     monkeypatch.setattr(dlf, "HrefParser", BadParser)
     text = '<a href="https://huggingface.co/datasets/a/b">x</a>'
     urls = dlf._extract_urls_from_html(text)
     assert any("huggingface.co" in u for u in urls)
 
 
-@pytest.mark.parametrize("inp,expected", [
-    ("https://huggingface.co/datasets/own/nm", "https://huggingface.co/datasets/own/nm"),
-    ("https://huggingface.co/own/nm", "https://huggingface.co/datasets/own/nm"),
-    ("owner1/data1", "https://huggingface.co/datasets/owner1/data1"),
-    ("", None),
-])
+@pytest.mark.parametrize(
+    "inp,expected",
+    [
+        ("https://huggingface.co/datasets/own/nm", "https://huggingface.co/datasets/own/nm"),
+        ("https://huggingface.co/own/nm", "https://huggingface.co/datasets/own/nm"),
+        ("owner1/data1", "https://huggingface.co/datasets/owner1/data1"),
+        ("", None),
+    ],
+)
 def test_normalize_hf_dataset_url(inp, expected):
     assert dlf._normalize_hf_dataset_url(inp) == expected
 
@@ -112,7 +122,6 @@ def test_scan_text_for_dataset_mentions_none():
     assert "owner/data" in results
 
 
-
 def test_find_datasets_from_resource_local(tmp_path):
     readme = tmp_path / "README.md"
     readme.write_text("[link](https://huggingface.co/datasets/aaa/bbb)")
@@ -122,7 +131,11 @@ def test_find_datasets_from_resource_local(tmp_path):
 
 def test_find_datasets_from_resource_url(monkeypatch):
     monkeypatch.setattr(dlf, "_read_local_readme", lambda x: None)
-    monkeypatch.setattr(dlf, "_try_fetch_readme_from_repo_url", lambda u: "[link](https://huggingface.co/datasets/xxx/yyy)")
+    monkeypatch.setattr(
+        dlf,
+        "_try_fetch_readme_from_repo_url",
+        lambda u: "[link](https://huggingface.co/datasets/xxx/yyy)",
+    )
     res, lat = dlf.find_datasets_from_resource({"url": "https://huggingface.co/xxx/yyy"})
     assert any("xxx/yyy" in u for u in res)
 
