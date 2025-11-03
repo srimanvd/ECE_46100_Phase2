@@ -7,13 +7,12 @@ on:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }} # e.g. us-east-2
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }} # e.g. phase2  (no slashes)
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }} # e.g. phase2
 
 jobs:
   build_and_push:
     name: Build & Push to ECR
     runs-on: ubuntu-latest
-
     outputs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
 
@@ -31,8 +30,9 @@ jobs:
       - name: Ensure ECR repository exists
         shell: bash
         run: |
-          aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || \
-          aws ecr create-repository --repository-name "${ECR_REPOSITORY}" >/dev/null
+          set -e
+          aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" >/dev/null 2>&1 || \
+          aws ecr create-repository --repository-name "$ECR_REPOSITORY" >/dev/null
 
       - name: Login to Amazon ECR
         id: ecr
@@ -59,49 +59,65 @@ jobs:
     needs: build_and_push
 
     steps:
-      - name: Deploy container on EC2
+      - name: SSH and deploy container
         uses: appleboy/ssh-action@v1.0.3
         env:
           IMAGE_TAG: ${{ needs.build_and_push.outputs.image_tag }}
         with:
-          host: ${{ secrets.EC2_HOST }} # ec2-xx-xx-xx-xx.compute-1.amazonaws.com
+          host: ${{ secrets.EC2_HOST }} # ec2-xx-xx-xx-xx.compute-x.amazonaws.com
           username: ${{ secrets.EC2_USER }} # ec2-user (Amazon Linux) or ubuntu (Ubuntu)
           key: ${{ secrets.EC2_SSH_KEY }} # PEM contents
           script_stop: true
-          envs: AWS_REGION,ECR_REPOSITORY,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,IMAGE_TAG
+          envs: AWS_REGION,ECR_REPOSITORY,IMAGE_TAG
           script: |
             bash -lc '
               set -euo pipefail
 
-              # Install Docker if missing
+              # Ensure Docker
               if ! command -v docker >/dev/null 2>&1; then
-                if [ -f /etc/os-release ]; then . /etc/os-release; fi
-                case "${ID:-}-${VERSION_ID:-}" in
-                  amzn-2023|amzn-2) sudo dnf -y update || sudo yum -y update; sudo dnf -y install docker || sudo yum -y install docker ;;
-                  ubuntu-*) sudo apt-get update -y; sudo apt-get install -y docker.io ;;
-                  *) (sudo dnf -y install docker || sudo yum -y install docker || sudo apt-get install -y docker.io) || true ;;
-                esac
+                if command -v dnf >/dev/null 2>&1; then
+                  sudo dnf -y update || true
+                  sudo dnf -y install docker
+                elif command -v yum >/dev/null 2>&1; then
+                  # Amazon Linux 2 often has docker in extras
+                  if command -v amazon-linux-extras >/dev/null 2>&1; then
+                    sudo amazon-linux-extras enable docker || true
+                  fi
+                  sudo yum -y update || true
+                  sudo yum -y install docker
+                elif command -v apt-get >/dev/null 2>&1; then
+                  sudo apt-get update -y
+                  sudo apt-get install -y docker.io
+                else
+                  echo "No supported package manager found" >&2
+                  exit 1
+                fi
                 sudo systemctl enable --now docker
               fi
 
-              # Install AWS CLI if missing
+              # Ensure AWS CLI
               if ! command -v aws >/dev/null 2>&1; then
-                if command -v dnf >/dev/null 2>&1; then sudo dnf -y install awscli || true
-                elif command -v yum >/dev/null 2>&1; then sudo yum -y install awscli || true
-                elif command -v apt-get >/dev/null 2>&1; then sudo apt-get install -y awscli || true
+                if command -v dnf >/dev/null 2>&1; then
+                  sudo dnf -y install awscli || true
+                elif command -v yum >/dev/null 2>&1; then
+                  sudo yum -y install awscli || true
+                elif command -v apt-get >/dev/null 2>&1; then
+                  sudo apt-get install -y awscli || true
                 fi
               fi
 
-              ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+              ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
               REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
               REPO="${ECR_REPOSITORY}"
               TAG="${IMAGE_TAG}"
 
               echo "Deploying ${REGISTRY}/${REPO}:${TAG}"
 
+              # Login to ECR using instance role (recommended)
               aws ecr get-login-password --region "${AWS_REGION}" \
                 | sudo docker login --username AWS --password-stdin "${REGISTRY}"
 
+              # Pull & (re)run
               sudo docker pull "${REGISTRY}/${REPO}:${TAG}"
               sudo docker rm -f phase2 || true
               sudo docker run -d --name phase2 --restart unless-stopped \
