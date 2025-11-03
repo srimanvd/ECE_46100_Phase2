@@ -2,12 +2,12 @@ name: CD
 
 on:
   push:
-    branches: [main] # deploy when main updates
-  workflow_dispatch: # manual run button
+    branches: [main]
+  workflow_dispatch:
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }} # e.g., us-east-2
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }} # e.g., phase2  (no slashes)
+  AWS_REGION: ${{ secrets.AWS_REGION }} # e.g. us-east-2
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }} # e.g. phase2  (no slashes)
 
 jobs:
   build_and_push:
@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -65,34 +65,26 @@ jobs:
           IMAGE_TAG: ${{ needs.build_and_push.outputs.image_tag }}
         with:
           host: ${{ secrets.EC2_HOST }} # ec2-xx-xx-xx-xx.compute-1.amazonaws.com
-          username: ${{ secrets.EC2_USER }} # e.g., ec2-user (Amazon Linux) or ubuntu (Ubuntu)
+          username: ${{ secrets.EC2_USER }} # ec2-user (Amazon Linux) or ubuntu (Ubuntu)
           key: ${{ secrets.EC2_SSH_KEY }} # PEM contents
           script_stop: true
-          # pass env vars (from runner) into the remote session so aws/docker can use them
           envs: AWS_REGION,ECR_REPOSITORY,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,IMAGE_TAG
           script: |
             bash -lc '
               set -euo pipefail
 
-              # Install Docker (and AWS CLI) if missing (idempotent)
+              # Install Docker if missing
               if ! command -v docker >/dev/null 2>&1; then
                 if [ -f /etc/os-release ]; then . /etc/os-release; fi
                 case "${ID:-}-${VERSION_ID:-}" in
-                  amzn-2023|amzn-2)
-                    sudo dnf -y update || sudo yum -y update
-                    sudo dnf -y install docker || sudo yum -y install docker
-                    ;;
-                  ubuntu-*)
-                    sudo apt-get update -y
-                    sudo apt-get install -y docker.io
-                    ;;
-                  *)
-                    (sudo dnf -y install docker || sudo yum -y install docker || sudo apt-get install -y docker.io) || true
-                    ;;
+                  amzn-2023|amzn-2) sudo dnf -y update || sudo yum -y update; sudo dnf -y install docker || sudo yum -y install docker ;;
+                  ubuntu-*) sudo apt-get update -y; sudo apt-get install -y docker.io ;;
+                  *) (sudo dnf -y install docker || sudo yum -y install docker || sudo apt-get install -y docker.io) || true ;;
                 esac
                 sudo systemctl enable --now docker
               fi
 
+              # Install AWS CLI if missing
               if ! command -v aws >/dev/null 2>&1; then
                 if command -v dnf >/dev/null 2>&1; then sudo dnf -y install awscli || true
                 elif command -v yum >/dev/null 2>&1; then sudo yum -y install awscli || true
@@ -100,7 +92,6 @@ jobs:
                 fi
               fi
 
-              # Compute ECR registry for this account/region
               ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
               REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
               REPO="${ECR_REPOSITORY}"
@@ -108,17 +99,13 @@ jobs:
 
               echo "Deploying ${REGISTRY}/${REPO}:${TAG}"
 
-              # Login to ECR and pull image
               aws ecr get-login-password --region "${AWS_REGION}" \
                 | sudo docker login --username AWS --password-stdin "${REGISTRY}"
 
               sudo docker pull "${REGISTRY}/${REPO}:${TAG}"
-
-              # Restart container
               sudo docker rm -f phase2 || true
               sudo docker run -d --name phase2 --restart unless-stopped \
                 "${REGISTRY}/${REPO}:${TAG}"
 
-              # Show status for your screenshot
               sudo docker ps --filter "name=phase2" --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
             '
