@@ -1,14 +1,13 @@
-# .github/workflows/cd.yml
 name: CD
 
 on:
   push:
-    branches: [main] # deploy on merge to main
-  workflow_dispatch: # allow manual runs
+    branches: [main]
+  workflow_dispatch:
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }} # e.g., us-east-2
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }} # e.g., phase2  (no slashes)
+  AWS_REGION: ${{ secrets.AWS_REGION }} # e.g. us-east-2
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }} # e.g. phase2
 
 jobs:
   build_and_push:
@@ -16,14 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
     outputs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
       repository: ${{ env.ECR_REPOSITORY }}
 
     steps:
       - name: Checkout
-        # pull code
         uses: actions/checkout@v4
 
       - name: Configure AWS credentials
@@ -34,9 +31,8 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Ensure ECR repository exists
-        shell: bash
         run: |
-          set -euo pipefail
+          set -e
           aws ecr describe-repositories --repository-names "${ECR_REPOSITORY}" >/dev/null 2>&1 || \
           aws ecr create-repository --repository-name "${ECR_REPOSITORY}" >/dev/null
 
@@ -53,7 +49,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
           IMAGE_TAG: ${{ steps.meta.outputs.image_tag }}
         run: |
-          set -euo pipefail
+          set -e
           echo "Registry: ${ECR_REGISTRY}"
           echo "Repo:     ${ECR_REPOSITORY}"
           echo "Tag:      ${IMAGE_TAG}"
@@ -80,59 +76,70 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }} # ec2-xx-xx-xx-xx.compute-1.amazonaws.com
           username: ${{ secrets.EC2_USER }} # ec2-user (Amazon Linux) or ubuntu (Ubuntu)
-          key: ${{ secrets.EC2_SSH_KEY }} # private key text from your .pem
+          key: ${{ secrets.EC2_SSH_KEY }} # full private key text
+          script_stop: true
+          # Pass creds to EC2 unless you're using an instance role
+          envs: AWS_REGION,ECR_REPOSITORY,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY
+          script: |
+            bash -lc '
+              set -e
+
+              # Minimal, POSIX-safe install for Docker
+              if ! command -v docker >/dev/null 2>&1; then
+                if command -v dnf >/dev/null 2>&1; then
+                  sudo dnf -y update || true
+                  sudo dnf -y install docker || true
+                elif command -v yum >/dev/null 2>&1; then
+                  sudo yum -y update || true
+                  sudo yum -y install docker || true
+                elif command -v apt-get >/dev/null 2>&1; then
+                  sudo apt-get update -y || true
+                  sudo apt-get install -y docker.io || true
+                fi
+                sudo systemctl enable --now docker || sudo service docker start || true
+              fi
+
+              # Ensure AWS CLI exists
+              if ! command -v aws >/dev/null 2>&1; then
+                if command -v dnf >/dev/null 2>&1; then sudo dnf -y install awscli || true
+                elif command -v yum >/dev/null 2>&1; then sudo yum -y install awscli || true
+                elif command -v apt-get >/dev/null 2>&1; then sudo apt-get install -y awscli || true
+                fi
+              fi
+
+              # If no instance role, use env creds
+              export AWS_DEFAULT_REGION="${AWS_REGION}"
+
+              ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+              REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+              REPO="${ECR_REPOSITORY}"   # from secrets/env
+              TAG="${{ needs.build_and_push.outputs.image_tag }}"
+
+              echo "Deploying ${REGISTRY}/${REPO}:${TAG}"
+
+              aws ecr get-login-password --region "${AWS_REGION}" \
+                | sudo docker login --username AWS --password-stdin "${REGISTRY}"
+
+              sudo docker pull "${REGISTRY}/${REPO}:${TAG}"'
+      - name: Run/Restart container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
           script_stop: true
           envs: AWS_REGION,ECR_REPOSITORY
           script: |
-            set -euo pipefail
+            bash -lc '
+              set -e
+              ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+              REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+              REPO="${ECR_REPOSITORY}"
+              TAG="${{ needs.build_and_push.outputs.image_tag }}"
 
-            # Install Docker (and AWS CLI if missing) — idempotent
-            if ! command -v docker >/dev/null 2>&1; then
-              if [ -f /etc/os-release ]; then . /etc/os-release; fi
-              case "${ID}-${VERSION_ID:-}" in
-                amzn-2023|amzn-2)
-                  sudo dnf -y update || sudo yum -y update
-                  sudo dnf -y install docker || sudo yum -y install docker
-                  ;;
-                ubuntu-*)
-                  sudo apt-get update -y
-                  sudo apt-get install -y docker.io
-                  ;;
-                *)
-                  (sudo dnf -y install docker || sudo yum -y install docker || sudo apt-get install -y docker.io) || true
-                  ;;
-              esac
-              sudo systemctl enable --now docker
-              if getent group docker >/dev/null 2>&1; then
-                sudo usermod -aG docker "$USER" || true
-              fi
-            fi
+              sudo docker rm -f phase2 || true
+              sudo docker run -d --name phase2 --restart unless-stopped \
+                "${REGISTRY}/${REPO}:${TAG}"
 
-            if ! command -v aws >/dev/null 2>&1; then
-              if command -v dnf >/dev/null 2>&1; then sudo dnf -y install awscli || true
-              elif command -v yum >/dev/null 2>&1; then sudo yum -y install awscli || true
-              elif command -v apt-get >/dev/null 2>&1; then sudo apt-get install -y awscli || true
-              fi
-            fi
-
-            # Compute ECR registry for this account/region
-            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-            REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-
-            # Use repository from build job outputs (fallback to secret)
-            REPO="${{ needs.build_and_push.outputs.repository }}"
-            if [ -z "$REPO" ]; then REPO="${ECR_REPOSITORY}"; fi
-
-            TAG="${{ needs.build_and_push.outputs.image_tag }}"
-            echo "Deploying ${REGISTRY}/${REPO}:${TAG}"
-
-            # Login to ECR and deploy
-            aws ecr get-login-password --region "${AWS_REGION}" \
-              | sudo docker login --username AWS --password-stdin "${REGISTRY}"
-
-            sudo docker pull "${REGISTRY}/${REPO}:${TAG}"
-            sudo docker rm -f phase2 || true
-            sudo docker run -d --name phase2 --restart unless-stopped \
-              "${REGISTRY}/${REPO}:${TAG}"
-
-            sudo docker ps --filter "name=phase2" --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
+              sudo docker ps --filter "name=phase2" --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"'
