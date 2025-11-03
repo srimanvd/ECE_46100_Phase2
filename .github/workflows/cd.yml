@@ -1,0 +1,102 @@
+name: CD / deploy to EC2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# These come from your GitHub Secrets
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }} # e.g. 123456789012.dkr.ecr.us-east-2.amazonaws.com
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }} # e.g. phase2
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker image to ECR
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag  $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Expose image tag
+        id: meta
+        run: echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: SSH deploy on EC2
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag || github.sha }}
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }} # public IP or DNS of your EC2
+          username: ${{ secrets.EC2_USER }} # e.g. ec2-user (Amazon Linux) or ubuntu (Ubuntu)
+          key: ${{ secrets.EC2_SSH_KEY }} # contents of your .pem private key
+          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG
+          script: |
+            set -euo pipefail
+
+            # Ensure docker + awscli exist (first run only)
+            if ! command -v docker >/dev/null; then
+              sudo yum -y update || true
+              # Amazon Linux
+              sudo amazon-linux-extras install docker -y || sudo yum install -y docker
+              sudo systemctl enable docker
+              sudo systemctl start docker
+              sudo usermod -aG docker $USER || true
+            fi
+            if ! command -v aws >/dev/null; then
+              curl -sS "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+              unzip -q awscliv2.zip
+              sudo ./aws/install
+            fi
+
+            # Login to ECR
+            aws ecr get-login-password --region "${AWS_REGION}" \
+              | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
+
+            # Pull new image
+            docker pull "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+            # Stop old container (if any)
+            docker rm -f phase2 || true
+
+            # Run new container (no port mapping for now)
+            docker run -d --name phase2 --restart unless-stopped \
+              "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+            # Optional: show what’s running
+            docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
