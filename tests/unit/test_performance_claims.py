@@ -1,8 +1,8 @@
 # tests/unit/test_performance_claims.py
 
 import pytest
-from requests import Response
 from huggingface_hub.utils import HfHubHTTPError
+from requests import Response
 
 from src.metrics.performance_claims import metric
 
