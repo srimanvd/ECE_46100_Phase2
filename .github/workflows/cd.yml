@@ -2,12 +2,12 @@ name: CD
 
 on:
   push:
-    branches: [main] # deploy on merge to main
-  workflow_dispatch: # allow manual runs
+    branches: [main] # deploy on merge/push to main
+  workflow_dispatch: {} # allow manual runs
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }} # e.g., us-east-2
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }} # e.g., phase2 (no slashes)
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }} # e.g., phase2  (no slashes)
 
 jobs:
   build_and_push:
@@ -56,7 +56,6 @@ jobs:
           echo "Registry: ${ECR_REGISTRY}"
           echo "Repo:     ${ECR_REPOSITORY}"
           echo "Tag:      ${IMAGE_TAG}"
-
           docker build -t "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}" .
           docker tag    "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}" "${ECR_REGISTRY}/${ECR_REPOSITORY}:latest"
           docker push   "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
@@ -78,26 +77,36 @@ jobs:
       - name: SSH into EC2 and deploy latest image
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }} # ec2-xx-xx-xx-xx.compute-1.amazonaws.com
-          username: ${{ secrets.EC2_USER }} # ec2-user (Amazon Linux) or ubuntu (Ubuntu)
-          key: ${{ secrets.EC2_SSH_KEY }} # private key text from your .pem
+          host: ${{ secrets.EC2_HOST }} # e.g., ec2-xx-xx-xx-xx.compute-1.amazonaws.com
+          username: ${{ secrets.EC2_USER }} # e.g., ec2-user (Amazon Linux) or ubuntu (Ubuntu)
+          key: ${{ secrets.EC2_SSH_KEY }} # paste full private key text
           script_stop: true
-          envs: AWS_REGION
+          # pass envs to the remote shell (optional if EC2 has an instance role)
+          envs: AWS_REGION,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,ECR_REPOSITORY
           script: |
             set -euo pipefail
+
+            # Compute registry for this account/region
             ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
             REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+            # Prefer build job output; fall back to secret if empty
             REPO="${{ needs.build_and_push.outputs.repository }}"
+            if [ -z "$REPO" ]; then REPO="${ECR_REPOSITORY}"; fi
+
             TAG="${{ needs.build_and_push.outputs.image_tag }}"
 
-            echo "Using ${REGISTRY}/${REPO}:${TAG}"
+            echo "Deploying ${REGISTRY}/${REPO}:${TAG}"
 
-            aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${REGISTRY}"
+            # Login to ECR (works via instance role or the env creds we passed)
+            aws ecr get-login-password --region "${AWS_REGION}" \
+              | docker login --username AWS --password-stdin "${REGISTRY}"
 
+            # Pull & (re)run container
             docker pull "${REGISTRY}/${REPO}:${TAG}"
             docker rm -f phase2 || true
-
             docker run -d --name phase2 --restart unless-stopped \
               "${REGISTRY}/${REPO}:${TAG}"
 
+            # Show status
             docker ps --filter "name=phase2" --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
