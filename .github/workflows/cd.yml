@@ -2,12 +2,12 @@ name: CD
 
 on:
   push:
-    branches: [ main ]     # deploy on merge to main
-  workflow_dispatch:       # allow manual runs
+    branches: [main] # deploy on merge to main
+  workflow_dispatch: # allow manual runs
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}              # e.g., us-east-2
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}      # e.g., phase2  (no slashes)
+  AWS_REGION: ${{ secrets.AWS_REGION }} # e.g., us-east-2
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }} # e.g., phase2 (no slashes)
 
 jobs:
   build_and_push:
@@ -19,8 +19,8 @@ jobs:
 
     outputs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
-      registry:  ${{ steps.ecr.outputs.registry }}
-      repository:${{ env.ECR_REPOSITORY }}
+      registry: ${{ steps.ecr.outputs.registry }}
+      repository: ${{ env.ECR_REPOSITORY }}
 
     steps:
       - name: Checkout
@@ -29,9 +29,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Ensure ECR repository exists
         shell: bash
@@ -49,8 +49,8 @@ jobs:
 
       - name: Build & push image
         env:
-          ECR_REGISTRY:  ${{ steps.ecr.outputs.registry }}
-          IMAGE_TAG:     ${{ steps.meta.outputs.image_tag }}
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.meta.outputs.image_tag }}
         run: |
           set -euo pipefail
           echo "Registry: ${ECR_REGISTRY}"
@@ -59,7 +59,6 @@ jobs:
 
           docker build -t "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}" .
           docker tag    "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}" "${ECR_REGISTRY}/${ECR_REPOSITORY}:latest"
-
           docker push   "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
           docker push   "${ECR_REGISTRY}/${ECR_REPOSITORY}:latest"
 
@@ -72,22 +71,20 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ env.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: SSH into EC2 and deploy latest image
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host:     ${{ secrets.EC2_HOST }}          # e.g., ec2-xx-xx-xx-xx.compute-1.amazonaws.com
-          username: ${{ secrets.EC2_USER }}          # e.g., ec2-user (Amazon Linux) or ubuntu (Ubuntu)
-          key:      ${{ secrets.EC2_SSH_KEY }}       # private key text from your .pem
+          host: ${{ secrets.EC2_HOST }} # ec2-xx-xx-xx-xx.compute-1.amazonaws.com
+          username: ${{ secrets.EC2_USER }} # ec2-user (Amazon Linux) or ubuntu (Ubuntu)
+          key: ${{ secrets.EC2_SSH_KEY }} # private key text from your .pem
           script_stop: true
           envs: AWS_REGION
           script: |
             set -euo pipefail
-
-            # Derive your account registry (same as in build job)
             ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
             REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
             REPO="${{ needs.build_and_push.outputs.repository }}"
@@ -95,18 +92,12 @@ jobs:
 
             echo "Using ${REGISTRY}/${REPO}:${TAG}"
 
-            # Login to ECR on the instance
             aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${REGISTRY}"
 
-            # Pull the new image
             docker pull "${REGISTRY}/${REPO}:${TAG}"
-
-            # Stop & remove previous container if it exists
             docker rm -f phase2 || true
 
-            # Run container (no ports published for now)
             docker run -d --name phase2 --restart unless-stopped \
               "${REGISTRY}/${REPO}:${TAG}"
 
-            # Optional: show running containers
             docker ps --filter "name=phase2" --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
