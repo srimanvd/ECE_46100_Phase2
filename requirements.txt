@@ -6,3 +6,9 @@ pytest
 coverage
 pytest-mock
 requests-mock
+fastapi
+uvicorn
+python-multipart
+pydantic
+boto3
+mangum
