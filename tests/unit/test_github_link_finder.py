@@ -1,4 +1,3 @@
-import logging
 
 from src.utils.github_link_finder import find_github_url_from_hf
 
@@ -28,10 +27,14 @@ def test_no_github_link_found(mocker, caplog):
     mocker.patch("src.utils.github_link_finder.hf_hub_download", return_value="fake_readme.md")
     mocker.patch("builtins.open", mocker.mock_open(read_data=fake_readme_content))
 
-    with caplog.at_level(logging.WARNING):
-        found_url = find_github_url_from_hf("some-hf-model/some-model")
-        assert found_url is None
-        assert "No GitHub link found" in caplog.text
+    # Mock the logger to verify calls
+    mock_logger = mocker.patch("src.utils.github_link_finder.logger")
+
+    found_url = find_github_url_from_hf("some-hf-model/some-model")
+    assert found_url is None
+    
+    # Verify warning was logged
+    mock_logger.warning.assert_called_with("No GitHub link found in README for some-hf-model/some-model")
 
 
 def test_multiple_links_picks_first(mocker):
