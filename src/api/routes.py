@@ -136,7 +136,9 @@ async def rate_package(id: str):
         LicenseScore=0, LicenseScoreLatency=0,
         GoodPinningPractice=0, GoodPinningPracticeLatency=0,
         PullRequest=0, PullRequestLatency=0,
-        NetScore=0, NetScoreLatency=0
+        NetScore=0, NetScoreLatency=0,
+        TreeScore=0, TreeScoreLatency=0,
+        Reproducibility=0, ReproducibilityLatency=0
     )
 
 @router.post("/package/byRegEx", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK)
