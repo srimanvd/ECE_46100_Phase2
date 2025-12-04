@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
@@ -14,6 +14,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    print(f"DEBUG: Request: {request.method} {request.url}")
+    print(f"DEBUG: Headers: {request.headers}")
+    try:
+        body = await request.body()
+        if body:
+            print(f"DEBUG: Body: {body.decode('utf-8')}")
+    except Exception as e:
+        print(f"DEBUG: Could not read body: {e}")
+    
+    response = await call_next(request)
+    return response
 
 app.include_router(router)
 
