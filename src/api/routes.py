@@ -88,8 +88,9 @@ async def upload_package(package: PackageData, x_authorization: str | None = Hea
              raise HTTPException(status_code=424, detail="Package is not ingestible (score too low)")
         
         pkg_id = generate_id()
-        name = package.URL
-        if "github.com" in package.URL:
+        # Extract name from URL or use provided name
+        name = package.Name if package.Name else package.URL
+        if not package.Name and "github.com" in package.URL:
              name = package.URL.split("github.com/")[-1]
         
         metadata = PackageMetadata(Name=name, Version="1.0.0", ID=pkg_id)
@@ -100,7 +101,8 @@ async def upload_package(package: PackageData, x_authorization: str | None = Hea
     elif package.Content and not package.URL:
         # Upload (Zip)
         pkg_id = generate_id()
-        metadata = PackageMetadata(Name="UploadedPackage", Version="1.0.0", ID=pkg_id)
+        name = package.Name if package.Name else "UploadedPackage"
+        metadata = PackageMetadata(Name=name, Version="1.0.0", ID=pkg_id)
         new_pkg = Package(metadata=metadata, data=package)
         storage.add_package(new_pkg)
         return metadata
@@ -110,6 +112,18 @@ async def upload_package(package: PackageData, x_authorization: str | None = Hea
 
 @router.post("/artifact", response_model=PackageMetadata, status_code=status.HTTP_201_CREATED)
 async def upload_artifact(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
+    return await upload_package(package, x_authorization)
+
+@router.post("/artifact/model", response_model=PackageMetadata, status_code=status.HTTP_201_CREATED)
+async def upload_artifact_model(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
+    return await upload_package(package, x_authorization)
+
+@router.post("/artifact/dataset", response_model=PackageMetadata, status_code=status.HTTP_201_CREATED)
+async def upload_artifact_dataset(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
+    return await upload_package(package, x_authorization)
+
+@router.post("/artifact/code", response_model=PackageMetadata, status_code=status.HTTP_201_CREATED)
+async def upload_artifact_code(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
     return await upload_package(package, x_authorization)
 
 @router.get("/package/{id}/rate", response_model=PackageRating, status_code=status.HTTP_200_OK)

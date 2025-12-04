@@ -9,9 +9,13 @@ class PackageMetadata(BaseModel):
     ID: str = Field(..., description="Package ID")
 
 class PackageData(BaseModel):
-    Content: str | None = Field(None, description="Base64 encoded zip file content")
-    URL: str | None = Field(None, description="Package URL (for ingest)")
-    JSProgram: str | None = Field(None, description="JavaScript program for sensitive modules")
+    Content: str | None = Field(None, description="Base64 encoded zip file content", alias="content")
+    URL: str | None = Field(None, description="Package URL (for ingest)", alias="url")
+    JSProgram: str | None = Field(None, description="JavaScript program for sensitive modules", alias="jsprogram")
+    Name: str | None = Field(None, description="Package name (optional)", alias="name")
+
+    class Config:
+        populate_by_name = True
 
 class Package(BaseModel):
     metadata: PackageMetadata
