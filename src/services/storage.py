@@ -5,31 +5,34 @@ from src.api.models import Package, PackageMetadata
 
 class LocalStorage:
     def __init__(self):
+        print("DEBUG: Initializing LocalStorage (In-Memory)")
         # In-memory storage: {package_id: Package}
-        self._packages: dict[str, Package] = {}
+        self.packages: dict[str, Package] = {}
 
     def add_package(self, package: Package) -> None:
-        self._packages[package.metadata.ID] = package
+        print(f"DEBUG: LocalStorage add_package {package.metadata.ID}")
+        self.packages[package.metadata.ID] = package
 
     def get_package(self, package_id: str) -> Package | None:
-        return self._packages.get(package_id)
+        return self.packages.get(package_id)
 
     def list_packages(self, offset: int = 0, limit: int = 10) -> list[PackageMetadata]:
-        all_packages = list(self._packages.values())
+        print(f"DEBUG: LocalStorage list_packages offset={offset} limit={limit}")
+        all_packages = list(self.packages.values())
         # Sort by ID or Name if needed, for now just slice
         # Pagination logic
-        start = offset
-        end = offset + limit
-        return [p.metadata for p in all_packages[start:end]]
+        return [p.metadata for p in all_packages[offset:offset+limit]]
 
     def delete_package(self, package_id: str) -> bool:
-        if package_id in self._packages:
-            del self._packages[package_id]
+        print(f"DEBUG: LocalStorage delete_package {package_id}")
+        if package_id in self.packages:
+            del self.packages[package_id]
             return True
         return False
 
     def reset(self) -> None:
-        self._packages.clear()
+        print("DEBUG: LocalStorage reset called")
+        self.packages.clear()
 
     def search_by_regex(self, regex: str) -> list[PackageMetadata]:
         import re
@@ -39,11 +42,9 @@ class LocalStorage:
             return [] # Or raise error
         
         matches = []
-        for p in self._packages.values():
-            if pattern.search(p.metadata.Name) or pattern.search(p.metadata.ID): # Search in Name or ID
-                 matches.append(p.metadata)
-        return matches
-
+        for pkg in self.packages.values():
+            if pattern.search(pkg.metadata.Name) or pattern.search(pkg.data.Content or ""): # Search in Name or Content
+                 matches.append(pkg.metadata)
         return matches
 
 class S3Storage:
