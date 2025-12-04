@@ -77,7 +77,7 @@ async def delete_package(id: str):
 async def delete_package_model(id: str):
     return await delete_package(id)
 
-@router.post("/package", response_model=PackageMetadata, status_code=status.HTTP_201_CREATED)
+@router.post("/package", response_model=Package, status_code=status.HTTP_201_CREATED)
 async def upload_package(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
     # Handle Ingest (URL) vs Upload (Content)
     
@@ -96,7 +96,7 @@ async def upload_package(package: PackageData, x_authorization: str | None = Hea
         metadata = PackageMetadata(Name=name, Version="1.0.0", ID=pkg_id)
         new_pkg = Package(metadata=metadata, data=package)
         storage.add_package(new_pkg)
-        return metadata
+        return new_pkg
 
     elif package.Content and not package.URL:
         # Upload (Zip)
@@ -105,24 +105,24 @@ async def upload_package(package: PackageData, x_authorization: str | None = Hea
         metadata = PackageMetadata(Name=name, Version="1.0.0", ID=pkg_id)
         new_pkg = Package(metadata=metadata, data=package)
         storage.add_package(new_pkg)
-        return metadata
+        return new_pkg
 
     else:
         raise HTTPException(status_code=400, detail="Provide either Content or URL, not both or neither.")
 
-@router.post("/artifact", response_model=PackageMetadata, status_code=status.HTTP_201_CREATED)
+@router.post("/artifact", response_model=Package, status_code=status.HTTP_201_CREATED)
 async def upload_artifact(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
     return await upload_package(package, x_authorization)
 
-@router.post("/artifact/model", response_model=PackageMetadata, status_code=status.HTTP_201_CREATED)
+@router.post("/artifact/model", response_model=Package, status_code=status.HTTP_201_CREATED)
 async def upload_artifact_model(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
     return await upload_package(package, x_authorization)
 
-@router.post("/artifact/dataset", response_model=PackageMetadata, status_code=status.HTTP_201_CREATED)
+@router.post("/artifact/dataset", response_model=Package, status_code=status.HTTP_201_CREATED)
 async def upload_artifact_dataset(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
     return await upload_package(package, x_authorization)
 
-@router.post("/artifact/code", response_model=PackageMetadata, status_code=status.HTTP_201_CREATED)
+@router.post("/artifact/code", response_model=Package, status_code=status.HTTP_201_CREATED)
 async def upload_artifact_code(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
     return await upload_package(package, x_authorization)
 
@@ -201,7 +201,7 @@ async def get_package_history_artifact(name: str):
 
 @router.get("/tracks", status_code=status.HTTP_200_OK)
 async def get_tracks():
-    return ["Access Control Track"]
+    return {"planned_tracks": ["Access Control Track"]}
 
 @router.put("/authenticate", status_code=status.HTTP_200_OK)
 async def authenticate(request: AuthenticationRequest):
