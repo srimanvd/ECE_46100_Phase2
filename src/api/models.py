@@ -46,8 +46,12 @@ class PackageHistoryEntry(BaseModel):
     Action: str
 
 class PackageQuery(BaseModel):
-    Name: str = Field(..., description="Package name")
-    Version: str | None = Field(None, description="Package version")
+    Name: str = Field(..., description="Package name", alias="name")
+    Version: str | None = Field(None, description="Package version", alias="version")
+    Types: list[str] | None = Field(None, description="Package types", alias="types")
+
+    class Config:
+        populate_by_name = True
 
 class PackageRegEx(BaseModel):
     RegEx: str = Field(..., description="Regex for searching packages")
