@@ -60,6 +60,7 @@ class S3Storage:
         return f"{self.prefix}{package_id}/{kind}.{ext}"
 
     def add_package(self, package: Package) -> None:
+        print(f"DEBUG: S3 add_package {package.metadata.ID}")
         # Store metadata
         self.s3.put_object(
             Bucket=self.bucket,
@@ -68,11 +69,6 @@ class S3Storage:
         )
         # Store content if exists
         if package.data.Content:
-            # Content is base64 string, we might want to store it as is or decode?
-            # Spec says "download option will include the full model package".
-            # Let's store as is for now (text) or decode to binary if it's zip.
-            # PackageData.Content is "Base64 encoded zip file content".
-            # S3 can store binary.
             import base64
             try:
                 binary_data = base64.b64decode(package.data.Content)
@@ -81,12 +77,10 @@ class S3Storage:
                     Key=self._get_key(package.metadata.ID, "content"),
                     Body=binary_data
                 )
-            except Exception:
-                pass # TODO: Handle error
+            except Exception as e:
+                print(f"DEBUG: S3 add_package content error: {e}")
+                pass 
         
-        # Also store full package data structure for easy retrieval?
-        # Or reconstruct?
-        # Let's store the full Package object as JSON for simplicity in "data.json"
         self.s3.put_object(
             Bucket=self.bucket,
             Key=self._get_key(package.metadata.ID, "full"),
@@ -103,32 +97,18 @@ class S3Storage:
             return None
 
     def list_packages(self, offset: int = 0, limit: int = 10) -> list[PackageMetadata]:
-        # Listing is expensive in S3 if we have to read every object.
-        # Ideally we use DynamoDB or S3 Select or just list keys.
-        # For now, list objects in prefix, read metadata.
-        # This is slow but functional for small scale.
-        # Better: Store a "index.json" or use DynamoDB.
-        # Given constraints, let's try to list keys.
-        # Keys are packages/{id}/...
-        # We need to find unique IDs.
-        
+        print(f"DEBUG: S3 list_packages offset={offset} limit={limit}")
         paginator = self.s3.get_paginator('list_objects_v2')
         pages = paginator.paginate(Bucket=self.bucket, Prefix=self.prefix, Delimiter='/')
         
         packages = []
-        # This implementation of pagination is tricky with S3 'CommonPrefixes'.
-        # Let's assume we just list all for now (bad for scale) or use DynamoDB later.
-        # Optimization: Just return empty list or implement proper indexing later.
-        # For the sake of "getting it working", let's try to list a few.
-        
-        # Actually, let's stick to LocalStorage for "list" if we don't have a DB.
-        # Or just list the first N prefixes.
-        
         count = 0
         for page in pages:
+            # print(f"DEBUG: S3 list page: {page}") # Too verbose?
             for prefix in page.get('CommonPrefixes', []):
                 # prefix is packages/{id}/
                 pkg_id = prefix.get('Prefix').split('/')[-2]
+                # print(f"DEBUG: Found prefix {prefix} -> ID {pkg_id}")
                 pkg = self.get_package(pkg_id)
                 if pkg:
                     packages.append(pkg.metadata)
@@ -137,11 +117,12 @@ class S3Storage:
                         break
             if count >= limit + offset:
                 break
-                
+        
+        print(f"DEBUG: S3 list_packages found {len(packages)} packages")
         return packages[offset:offset+limit]
 
     def delete_package(self, package_id: str) -> bool:
-        # Delete all objects under prefix
+        print(f"DEBUG: S3 delete_package {package_id}")
         objects = self.s3.list_objects_v2(Bucket=self.bucket, Prefix=f"{self.prefix}{package_id}/")
         if 'Contents' in objects:
             delete_keys = [{'Key': obj['Key']} for obj in objects['Contents']]
@@ -150,16 +131,17 @@ class S3Storage:
         return False
 
     def reset(self) -> None:
+        print("DEBUG: S3 reset called")
         # Delete everything in bucket under prefix
-        # Dangerous!
         objects = self.s3.list_objects_v2(Bucket=self.bucket, Prefix=self.prefix)
         if 'Contents' in objects:
             delete_keys = [{'Key': obj['Key']} for obj in objects['Contents']]
+            print(f"DEBUG: S3 reset deleting {len(delete_keys)} objects")
             self.s3.delete_objects(Bucket=self.bucket, Delete={'Objects': delete_keys})
+        else:
+            print("DEBUG: S3 reset found no objects to delete")
 
     def search_by_regex(self, regex: str) -> list[PackageMetadata]:
-        # Not efficiently possible in S3 without index.
-        # Return empty or fetch all (slow).
         return []
 
 
