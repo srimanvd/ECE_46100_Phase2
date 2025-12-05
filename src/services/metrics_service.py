@@ -96,16 +96,16 @@ def compute_package_rating(url: str) -> PackageRating:
             
         # Return scores that pass ingestion (NetScore >= 0.5)
         return PackageRating(
-            busFactor=0.6, busFactorLatency=0,
-            correctness=0.6, correctnessLatency=0,
-            rampUp=0.6, rampUpLatency=0,
-            responsiveMaintainer=0.6, responsiveMaintainerLatency=0,
-            licenseScore=1.0, licenseScoreLatency=0,
-            goodPinningPractice=0.6, goodPinningPracticeLatency=0,
-            pullRequest=0.6, pullRequestLatency=0,
-            netScore=0.6, netScoreLatency=0,
-            treeScore=0.6, treeScoreLatency=0,
-            reproducibility=0.6, reproducibilityLatency=0
+            bus_factor=0.6, bus_factor_latency=0,
+            correctness=0.6, correctness_latency=0,
+            ramp_up=0.6, ramp_up_latency=0,
+            responsive_maintainer=0.6, responsive_maintainer_latency=0,
+            license_score=1.0, license_score_latency=0,
+            good_pinning_practice=0.6, good_pinning_practice_latency=0,
+            pull_request=0.6, pull_request_latency=0,
+            net_score=0.6, net_score_latency=0,
+            tree_score=0.6, tree_score_latency=0,
+            reproducibility=0.6, reproducibility_latency=0
         )
 
     metrics = load_metrics()
@@ -212,24 +212,24 @@ def compute_package_rating(url: str) -> PackageRating:
          logger.error(f"TreeScore failed: {e}")
 
     return PackageRating(
-        busFactor=get_res("bus_factor")[0],
-        busFactorLatency=get_res("bus_factor")[1],
+        bus_factor=get_res("bus_factor")[0],
+        bus_factor_latency=get_res("bus_factor")[1],
         correctness=get_res("code_quality")[0],
-        correctnessLatency=get_res("code_quality")[1],
-        rampUp=get_res("ramp_up_time")[0],
-        rampUpLatency=get_res("ramp_up_time")[1],
-        responsiveMaintainer=get_res("responsive_maintainer")[0],
-        responsiveMaintainerLatency=get_res("responsive_maintainer")[1],
-        licenseScore=get_res("license")[0],
-        licenseScoreLatency=get_res("license")[1],
-        goodPinningPractice=get_res("good_pinning_practice")[0],
-        goodPinningPracticeLatency=get_res("good_pinning_practice")[1],
-        pullRequest=reviewedness_score, # Map Reviewedness to PullRequest as per spec/naming
-        pullRequestLatency=reviewedness_latency,
-        netScore=net_score_val,
-        netScoreLatency=net_score_lat,
-        treeScore=treescore_score,
-        treeScoreLatency=treescore_latency,
+        correctness_latency=get_res("code_quality")[1],
+        ramp_up=get_res("ramp_up_time")[0],
+        ramp_up_latency=get_res("ramp_up_time")[1],
+        responsive_maintainer=get_res("responsive_maintainer")[0],
+        responsive_maintainer_latency=get_res("responsive_maintainer")[1],
+        license_score=get_res("license")[0],
+        license_score_latency=get_res("license")[1],
+        good_pinning_practice=get_res("good_pinning_practice")[0],
+        good_pinning_practice_latency=get_res("good_pinning_practice")[1],
+        pull_request=reviewedness_score,
+        pull_request_latency=reviewedness_latency,
+        net_score=net_score_val,
+        net_score_latency=net_score_lat,
+        tree_score=treescore_score,
+        tree_score_latency=treescore_latency,
         reproducibility=reproducibility_score,
-        reproducibilityLatency=reproducibility_latency
+        reproducibility_latency=reproducibility_latency
     )

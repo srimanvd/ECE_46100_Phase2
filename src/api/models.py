@@ -20,26 +20,26 @@ class Package(BaseModel):
     data: PackageData
 
 class PackageRating(BaseModel):
-    busFactor: float
-    busFactorLatency: float
+    bus_factor: float
+    bus_factor_latency: float
     correctness: float
-    correctnessLatency: float
-    rampUp: float
-    rampUpLatency: float
-    responsiveMaintainer: float
-    responsiveMaintainerLatency: float
-    licenseScore: float
-    licenseScoreLatency: float
-    goodPinningPractice: float
-    goodPinningPracticeLatency: float
-    pullRequest: float
-    pullRequestLatency: float
-    netScore: float
-    netScoreLatency: float
-    treeScore: float
-    treeScoreLatency: float
+    correctness_latency: float
+    ramp_up: float
+    ramp_up_latency: float
+    responsive_maintainer: float
+    responsive_maintainer_latency: float
+    license_score: float
+    license_score_latency: float
+    good_pinning_practice: float
+    good_pinning_practice_latency: float
+    pull_request: float
+    pull_request_latency: float
+    net_score: float
+    net_score_latency: float
+    tree_score: float
+    tree_score_latency: float
     reproducibility: float
-    reproducibilityLatency: float
+    reproducibility_latency: float
     name: str | None = None
     category: str | None = None
 

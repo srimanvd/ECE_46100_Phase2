@@ -27,16 +27,16 @@ def test_ingest_package():
     
     with patch("src.api.routes.compute_package_rating") as mock_rate:
         mock_rate.return_value = PackageRating(
-            busFactor=1, busFactorLatency=0,
-            correctness=1, correctnessLatency=0,
-            rampUp=1, rampUpLatency=0,
-            responsiveMaintainer=1, responsiveMaintainerLatency=0,
-            licenseScore=1, licenseScoreLatency=0,
-            goodPinningPractice=1, goodPinningPracticeLatency=0,
-            pullRequest=1, pullRequestLatency=0,
-            netScore=1.0, netScoreLatency=0,
-            treeScore=1.0, treeScoreLatency=0,
-            reproducibility=1.0, reproducibilityLatency=0
+            bus_factor=1, bus_factor_latency=0,
+            correctness=1, correctness_latency=0,
+            ramp_up=1, ramp_up_latency=0,
+            responsive_maintainer=1, responsive_maintainer_latency=0,
+            license_score=1, license_score_latency=0,
+            good_pinning_practice=1, good_pinning_practice_latency=0,
+            pull_request=1, pull_request_latency=0,
+            net_score=1.0, net_score_latency=0,
+            tree_score=1.0, tree_score_latency=0,
+            reproducibility=1.0, reproducibility_latency=0
         )
         
         payload = {
@@ -64,16 +64,16 @@ def test_rate_package():
     
     with patch("src.api.routes.compute_package_rating") as mock_rate:
         mock_rate.return_value = PackageRating(
-            busFactor=0.8, busFactorLatency=10,
-            correctness=0.9, correctnessLatency=10,
-            rampUp=0.7, rampUpLatency=10,
-            responsiveMaintainer=0.6, responsiveMaintainerLatency=10,
-            licenseScore=1.0, licenseScoreLatency=10,
-            goodPinningPractice=1.0, goodPinningPracticeLatency=10,
-            pullRequest=0.5, pullRequestLatency=10,
-            netScore=0.85, netScoreLatency=70,
-            treeScore=0.5, treeScoreLatency=10,
-            reproducibility=0.5, reproducibilityLatency=10
+            bus_factor=0.8, bus_factor_latency=10,
+            correctness=0.9, correctness_latency=10,
+            ramp_up=0.7, ramp_up_latency=10,
+            responsive_maintainer=0.6, responsive_maintainer_latency=10,
+            license_score=1.0, license_score_latency=10,
+            good_pinning_practice=1.0, good_pinning_practice_latency=10,
+            pull_request=0.5, pull_request_latency=10,
+            net_score=0.85, net_score_latency=70,
+            tree_score=0.5, tree_score_latency=10,
+            reproducibility=0.5, reproducibility_latency=10
         )
         
         # Ingest first
@@ -85,7 +85,7 @@ def test_rate_package():
         response = client.get(f"/package/{pkg_id}/rate")
         assert response.status_code == 200
         data = response.json()
-        assert data["netScore"] == 0.85
+        assert data["net_score"] == 0.85
 
 def test_get_packages_empty():
     client.delete("/reset")
@@ -94,11 +94,11 @@ def test_get_packages_empty():
     from src.api.models import PackageRating
     with patch("src.api.routes.compute_package_rating") as mock_rate:
         mock_rate.return_value = PackageRating(
-            busFactor=1, busFactorLatency=0, correctness=1, correctnessLatency=0,
-            rampUp=1, rampUpLatency=0, responsiveMaintainer=1, responsiveMaintainerLatency=0,
-            licenseScore=1, licenseScoreLatency=0, goodPinningPractice=1, goodPinningPracticeLatency=0,
-            pullRequest=1, pullRequestLatency=0, netScore=1.0, netScoreLatency=0,
-            treeScore=1.0, treeScoreLatency=0, reproducibility=1.0, reproducibilityLatency=0
+            bus_factor=1, bus_factor_latency=0, correctness=1, correctness_latency=0,
+            ramp_up=1, ramp_up_latency=0, responsive_maintainer=1, responsive_maintainer_latency=0,
+            license_score=1, license_score_latency=0, good_pinning_practice=1, good_pinning_practice_latency=0,
+            pull_request=1, pull_request_latency=0, net_score=1.0, net_score_latency=0,
+            tree_score=1.0, tree_score_latency=0, reproducibility=1.0, reproducibility_latency=0
         )
         for i in range(15):
             client.post("/package", json={"url": f"https://github.com/test/repo{i}", "jsprogram": "js"})
@@ -149,10 +149,10 @@ def test_rate_and_cost_structure():
     assert response.status_code == 200
     data = response.json()
     # Should be 0s
-    assert data["netScore"] == 0
+    assert data["net_score"] == 0
     assert data["name"] == "rate-test"
     assert data["category"] == "code"
-    assert "busFactor" in data # Check lowercase
+    assert "bus_factor" in data # Check lowercase
     
     # Test Cost
     response = client.get(f"/artifact/model/{pkg_id}/cost")
@@ -171,16 +171,16 @@ def test_upload_package():
     
     with patch("src.api.routes.compute_package_rating") as mock_rate:
         mock_rate.return_value = PackageRating(
-            busFactor=1, busFactorLatency=0,
-            correctness=1, correctnessLatency=0,
-            rampUp=1, rampUpLatency=0,
-            responsiveMaintainer=1, responsiveMaintainerLatency=0,
-            licenseScore=1, licenseScoreLatency=0,
-            goodPinningPractice=1, goodPinningPracticeLatency=0,
-            pullRequest=1, pullRequestLatency=0,
-            netScore=1.0, netScoreLatency=0,
-            treeScore=1.0, treeScoreLatency=0,
-            reproducibility=1.0, reproducibilityLatency=0
+            bus_factor=1, bus_factor_latency=0,
+            correctness=1, correctness_latency=0,
+            ramp_up=1, ramp_up_latency=0,
+            responsive_maintainer=1, responsive_maintainer_latency=0,
+            license_score=1, license_score_latency=0,
+            good_pinning_practice=1, good_pinning_practice_latency=0,
+            pull_request=1, pull_request_latency=0,
+            net_score=1.0, net_score_latency=0,
+            tree_score=1.0, tree_score_latency=0,
+            reproducibility=1.0, reproducibility_latency=0
         )
         
         payload = {
@@ -222,11 +222,11 @@ def test_search_by_regex():
     from src.api.models import PackageRating
     with patch("src.api.routes.compute_package_rating") as mock_rate:
          mock_rate.return_value = PackageRating(
-            busFactor=0.5, busFactorLatency=0, correctness=0.5, correctnessLatency=0,
-            rampUp=0.5, rampUpLatency=0, responsiveMaintainer=0.5, responsiveMaintainerLatency=0,
-            licenseScore=0.5, licenseScoreLatency=0, goodPinningPractice=0.5, goodPinningPracticeLatency=0,
-            pullRequest=0.5, pullRequestLatency=0, netScore=0.5, netScoreLatency=0,
-            treeScore=0.5, treeScoreLatency=0, reproducibility=0.5, reproducibilityLatency=0
+            bus_factor=0.5, bus_factor_latency=0, correctness=0.5, correctness_latency=0,
+            ramp_up=0.5, ramp_up_latency=0, responsive_maintainer=0.5, responsive_maintainer_latency=0,
+            license_score=0.5, license_score_latency=0, good_pinning_practice=0.5, good_pinning_practice_latency=0,
+            pull_request=0.5, pull_request_latency=0, net_score=0.5, net_score_latency=0,
+            tree_score=0.5, tree_score_latency=0, reproducibility=0.5, reproducibility_latency=0
          )
          client.post("/package", json={"url": "https://github.com/test/regex", "jsprogram": "js"})
     
@@ -279,7 +279,7 @@ def test_rate_package_no_url():
     assert response.status_code == 200
     data = response.json()
     # Expect all 0s
-    assert data["netScore"] == 0
+    assert data["net_score"] == 0
 
 def test_upload_model():
     client.delete("/reset")

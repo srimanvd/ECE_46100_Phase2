@@ -95,7 +95,7 @@ async def upload_package(package: PackageData, x_authorization: str | None = Hea
     if package.url and not package.content:
         # Ingest
         rating = compute_package_rating(package.url)
-        if rating.netScore < 0.5:
+        if rating.net_score < 0.5:
              raise HTTPException(status_code=424, detail="Package is not ingestible (score too low)")
         
         pkg_id = generate_id()
@@ -171,43 +171,43 @@ async def rate_package(id: str):
     
     if pkg.data.url:
         rating = compute_package_rating(pkg.data.url)
-        # Map PascalCase to camelCase (actually now both are camelCase)
+        # Map to snake_case
         return PackageRating(
-            busFactor=rating.busFactor,
-            busFactorLatency=rating.busFactorLatency,
+            bus_factor=rating.bus_factor,
+            bus_factor_latency=rating.bus_factor_latency,
             correctness=rating.correctness,
-            correctnessLatency=rating.correctnessLatency,
-            rampUp=rating.rampUp,
-            rampUpLatency=rating.rampUpLatency,
-            responsiveMaintainer=rating.responsiveMaintainer,
-            responsiveMaintainerLatency=rating.responsiveMaintainerLatency,
-            licenseScore=rating.licenseScore,
-            licenseScoreLatency=rating.licenseScoreLatency,
-            goodPinningPractice=rating.goodPinningPractice,
-            goodPinningPracticeLatency=rating.goodPinningPracticeLatency,
-            pullRequest=rating.pullRequest,
-            pullRequestLatency=rating.pullRequestLatency,
-            netScore=rating.netScore,
-            netScoreLatency=rating.netScoreLatency,
-            treeScore=rating.treeScore,
-            treeScoreLatency=rating.treeScoreLatency,
+            correctness_latency=rating.correctness_latency,
+            ramp_up=rating.ramp_up,
+            ramp_up_latency=rating.ramp_up_latency,
+            responsive_maintainer=rating.responsive_maintainer,
+            responsive_maintainer_latency=rating.responsive_maintainer_latency,
+            license_score=rating.license_score,
+            license_score_latency=rating.license_score_latency,
+            good_pinning_practice=rating.good_pinning_practice,
+            good_pinning_practice_latency=rating.good_pinning_practice_latency,
+            pull_request=rating.pull_request,
+            pull_request_latency=rating.pull_request_latency,
+            net_score=rating.net_score,
+            net_score_latency=rating.net_score_latency,
+            tree_score=rating.tree_score,
+            tree_score_latency=rating.tree_score_latency,
             reproducibility=rating.reproducibility,
-            reproducibilityLatency=rating.reproducibilityLatency,
+            reproducibility_latency=rating.reproducibility_latency,
             name=pkg.metadata.name,
             category=pkg.metadata.type.lower() if pkg.metadata.type else "code"
         )
     
     return PackageRating(
-        busFactor=0, busFactorLatency=0,
-        correctness=0, correctnessLatency=0,
-        rampUp=0, rampUpLatency=0,
-        responsiveMaintainer=0, responsiveMaintainerLatency=0,
-        licenseScore=0, licenseScoreLatency=0,
-        goodPinningPractice=0, goodPinningPracticeLatency=0,
-        pullRequest=0, pullRequestLatency=0,
-        netScore=0, netScoreLatency=0,
-        treeScore=0, treeScoreLatency=0,
-        reproducibility=0, reproducibilityLatency=0,
+        bus_factor=0, bus_factor_latency=0,
+        correctness=0, correctness_latency=0,
+        ramp_up=0, ramp_up_latency=0,
+        responsive_maintainer=0, responsive_maintainer_latency=0,
+        license_score=0, license_score_latency=0,
+        good_pinning_practice=0, good_pinning_practice_latency=0,
+        pull_request=0, pull_request_latency=0,
+        net_score=0, net_score_latency=0,
+        tree_score=0, tree_score_latency=0,
+        reproducibility=0, reproducibility_latency=0,
         name=pkg.metadata.name,
         category=pkg.metadata.type.lower() if pkg.metadata.type else "code"
     )
