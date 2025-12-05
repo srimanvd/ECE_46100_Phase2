@@ -7,7 +7,7 @@ class PackageMetadata(BaseModel):
     name: str = Field(..., description="Package name")
     version: str = Field(..., description="Package version")
     id: str = Field(..., description="Package ID")
-    type: str = Field("Code", description="Package type")
+    type: str = Field("code", description="Package type")
 
 class PackageData(BaseModel):
     content: str | None = Field(None, description="Base64 encoded zip file content")

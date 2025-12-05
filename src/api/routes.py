@@ -78,7 +78,7 @@ async def delete_package_model(id: str):
     return await delete_package(id)
 
 @router.post("/package", response_model=Package, status_code=status.HTTP_201_CREATED)
-async def upload_package(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization"), package_type: str = "Code"):
+async def upload_package(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization"), package_type: str = "code"):
     # Handle Ingest (URL) vs Upload (Content)
     
     if package.url and not package.content:
@@ -112,19 +112,19 @@ async def upload_package(package: PackageData, x_authorization: str | None = Hea
 
 @router.post("/artifact", response_model=Package, status_code=status.HTTP_201_CREATED)
 async def upload_artifact(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
-    return await upload_package(package, x_authorization, package_type="Code")
+    return await upload_package(package, x_authorization, package_type="code")
 
 @router.post("/artifact/model", response_model=Package, status_code=status.HTTP_201_CREATED)
 async def upload_artifact_model(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
-    return await upload_package(package, x_authorization, package_type="Model")
+    return await upload_package(package, x_authorization, package_type="model")
 
 @router.post("/artifact/dataset", response_model=Package, status_code=status.HTTP_201_CREATED)
 async def upload_artifact_dataset(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
-    return await upload_package(package, x_authorization, package_type="Dataset")
+    return await upload_package(package, x_authorization, package_type="dataset")
 
 @router.post("/artifact/code", response_model=Package, status_code=status.HTTP_201_CREATED)
 async def upload_artifact_code(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
-    return await upload_package(package, x_authorization, package_type="Code")
+    return await upload_package(package, x_authorization, package_type="code")
 
 # --- Plural Aliases for Autograder Compatibility ---
 
