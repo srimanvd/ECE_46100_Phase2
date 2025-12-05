@@ -29,7 +29,7 @@ def test_ingest_package():
         mock_rate.return_value = PackageRating(
             bus_factor=1, bus_factor_latency=0,
             correctness=1, correctness_latency=0,
-            ramp_up=1, ramp_up_latency=0,
+            ramp_up_time=1, ramp_up_time_latency=0,
             responsive_maintainer=1, responsive_maintainer_latency=0,
             license_score=1, license_score_latency=0,
             good_pinning_practice=1, good_pinning_practice_latency=0,
@@ -66,7 +66,7 @@ def test_rate_package():
         mock_rate.return_value = PackageRating(
             bus_factor=0.8, bus_factor_latency=10,
             correctness=0.9, correctness_latency=10,
-            ramp_up=0.7, ramp_up_latency=10,
+            ramp_up_time=0.7, ramp_up_time_latency=10,
             responsive_maintainer=0.6, responsive_maintainer_latency=10,
             license_score=1.0, license_score_latency=10,
             good_pinning_practice=1.0, good_pinning_practice_latency=10,
@@ -95,7 +95,7 @@ def test_get_packages_empty():
     with patch("src.api.routes.compute_package_rating") as mock_rate:
         mock_rate.return_value = PackageRating(
             bus_factor=1, bus_factor_latency=0, correctness=1, correctness_latency=0,
-            ramp_up=1, ramp_up_latency=0, responsive_maintainer=1, responsive_maintainer_latency=0,
+            ramp_up_time=1, ramp_up_time_latency=0, responsive_maintainer=1, responsive_maintainer_latency=0,
             license_score=1, license_score_latency=0, good_pinning_practice=1, good_pinning_practice_latency=0,
             pull_request=1, pull_request_latency=0, net_score=1.0, net_score_latency=0,
             tree_score=1.0, tree_score_latency=0, reproducibility=1.0, reproducibility_latency=0
@@ -173,7 +173,7 @@ def test_upload_package():
         mock_rate.return_value = PackageRating(
             bus_factor=1, bus_factor_latency=0,
             correctness=1, correctness_latency=0,
-            ramp_up=1, ramp_up_latency=0,
+            ramp_up_time=1, ramp_up_time_latency=0,
             responsive_maintainer=1, responsive_maintainer_latency=0,
             license_score=1, license_score_latency=0,
             good_pinning_practice=1, good_pinning_practice_latency=0,
@@ -223,7 +223,7 @@ def test_search_by_regex():
     with patch("src.api.routes.compute_package_rating") as mock_rate:
          mock_rate.return_value = PackageRating(
             bus_factor=0.5, bus_factor_latency=0, correctness=0.5, correctness_latency=0,
-            ramp_up=0.5, ramp_up_latency=0, responsive_maintainer=0.5, responsive_maintainer_latency=0,
+            ramp_up_time=0.5, ramp_up_time_latency=0, responsive_maintainer=0.5, responsive_maintainer_latency=0,
             license_score=0.5, license_score_latency=0, good_pinning_practice=0.5, good_pinning_practice_latency=0,
             pull_request=0.5, pull_request_latency=0, net_score=0.5, net_score_latency=0,
             tree_score=0.5, tree_score_latency=0, reproducibility=0.5, reproducibility_latency=0

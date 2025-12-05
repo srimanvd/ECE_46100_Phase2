@@ -24,8 +24,8 @@ class PackageRating(BaseModel):
     bus_factor_latency: float
     correctness: float
     correctness_latency: float
-    ramp_up: float
-    ramp_up_latency: float
+    ramp_up_time: float
+    ramp_up_time_latency: float
     responsive_maintainer: float
     responsive_maintainer_latency: float
     license_score: float
