@@ -36,7 +36,7 @@ def test_ingest_package():
             pull_request=1, pull_request_latency=0,
             net_score=1.0, net_score_latency=0,
             tree_score=1.0, tree_score_latency=0,
-            reproducibility=1.0, reproducibility_latency=0
+            reproducibility=1.0, reproducibility_latency=0, performance_claims=1.0, performance_claims_latency=0, dataset_and_code_score=1.0, dataset_and_code_score_latency=0, dataset_quality=1.0, dataset_quality_latency=0, size=1.0, size_latency=0
         )
         
         payload = {
@@ -73,7 +73,7 @@ def test_rate_package():
             pull_request=0.5, pull_request_latency=10,
             net_score=0.85, net_score_latency=70,
             tree_score=0.5, tree_score_latency=10,
-            reproducibility=0.5, reproducibility_latency=10
+            reproducibility=0.5, reproducibility_latency=10, performance_claims=0.5, performance_claims_latency=10, dataset_and_code_score=0.5, dataset_and_code_score_latency=10, dataset_quality=0.5, dataset_quality_latency=10, size=0.5, size_latency=10
         )
         
         # Ingest first
@@ -98,7 +98,7 @@ def test_get_packages_empty():
             ramp_up_time=1, ramp_up_time_latency=0, responsive_maintainer=1, responsive_maintainer_latency=0,
             license_score=1, license_score_latency=0, good_pinning_practice=1, good_pinning_practice_latency=0,
             pull_request=1, pull_request_latency=0, net_score=1.0, net_score_latency=0,
-            tree_score=1.0, tree_score_latency=0, reproducibility=1.0, reproducibility_latency=0
+            tree_score=1.0, tree_score_latency=0, reproducibility=1.0, reproducibility_latency=0, performance_claims=1.0, performance_claims_latency=0, dataset_and_code_score=1.0, dataset_and_code_score_latency=0, dataset_quality=1.0, dataset_quality_latency=0, size=1.0, size_latency=0
         )
         for i in range(15):
             client.post("/package", json={"url": f"https://github.com/test/repo{i}", "jsprogram": "js"})
@@ -180,7 +180,7 @@ def test_upload_package():
             pull_request=1, pull_request_latency=0,
             net_score=1.0, net_score_latency=0,
             tree_score=1.0, tree_score_latency=0,
-            reproducibility=1.0, reproducibility_latency=0
+            reproducibility=1.0, reproducibility_latency=0, performance_claims=1.0, performance_claims_latency=0, dataset_and_code_score=1.0, dataset_and_code_score_latency=0, dataset_quality=1.0, dataset_quality_latency=0, size=1.0, size_latency=0
         )
         
         payload = {
@@ -226,7 +226,7 @@ def test_search_by_regex():
             ramp_up_time=0.5, ramp_up_time_latency=0, responsive_maintainer=0.5, responsive_maintainer_latency=0,
             license_score=0.5, license_score_latency=0, good_pinning_practice=0.5, good_pinning_practice_latency=0,
             pull_request=0.5, pull_request_latency=0, net_score=0.5, net_score_latency=0,
-            tree_score=0.5, tree_score_latency=0, reproducibility=0.5, reproducibility_latency=0
+            tree_score=0.5, tree_score_latency=0, reproducibility=0.5, reproducibility_latency=0, performance_claims=0.5, performance_claims_latency=0, dataset_and_code_score=0.5, dataset_and_code_score_latency=0, dataset_quality=0.5, dataset_quality_latency=0, size=0.5, size_latency=0
          )
          client.post("/package", json={"url": "https://github.com/test/regex", "jsprogram": "js"})
     
