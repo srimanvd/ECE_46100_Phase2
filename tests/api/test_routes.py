@@ -46,11 +46,11 @@ def test_ingest_package():
         response = client.post("/package", json=payload)
         assert response.status_code == 201
         data = response.json()
-        assert data["metadata"]["Name"] == "test/repo"
-        assert data["metadata"]["ID"] is not None
+        assert data["metadata"]["name"] == "test/repo"
+        assert data["metadata"]["id"] is not None
         
         # Verify it's in storage
-        pkg = storage.get_package(data["metadata"]["ID"])
+        pkg = storage.get_package(data["metadata"]["id"])
         assert pkg is not None
         assert pkg.data.URL == "https://github.com/test/repo"
 
@@ -78,7 +78,7 @@ def test_rate_package():
         # Ingest first
         payload = {"URL": "https://github.com/test/repo"}
         res_ingest = client.post("/package", json=payload)
-        pkg_id = res_ingest.json()["metadata"]["ID"]
+        pkg_id = res_ingest.json()["metadata"]["id"]
         
         # Rate
         response = client.get(f"/package/{pkg_id}/rate")
@@ -120,11 +120,11 @@ def test_upload_package():
         response = client.post("/package", json=payload)
         assert response.status_code == 201
         data = response.json()
-        assert data["metadata"]["Name"] == "UploadedPackage"
-        assert data["metadata"]["ID"] is not None
+        assert data["metadata"]["name"] == "UploadedPackage"
+        assert data["metadata"]["id"] is not None
         
         # Verify storage
-        pkg = storage.get_package(data["metadata"]["ID"])
+        pkg = storage.get_package(data["metadata"]["id"])
         assert pkg.data.Content == payload["Content"]
 
 def test_delete_package_not_found():
@@ -164,7 +164,7 @@ def test_search_by_regex():
     assert response.status_code == 200
     data = response.json()
     assert len(data) > 0
-    assert data[0]["Name"] == "test/regex"
+    assert data[0]["name"] == "test/regex"
 
 def test_rate_package_no_url():
     # Test rating a package that has no URL (e.g. uploaded content only)
@@ -178,7 +178,7 @@ def test_rate_package_no_url():
     # Upload path doesn't call compute_package_rating.
     
     res = client.post("/package", json=payload)
-    pkg_id = res.json()["metadata"]["ID"]
+    pkg_id = res.json()["metadata"]["id"]
     
     # Rate it
     response = client.get(f"/package/{pkg_id}/rate")
