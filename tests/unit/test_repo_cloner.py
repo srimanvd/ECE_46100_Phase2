@@ -14,10 +14,10 @@ def test_clone_repo_failure(mocker):
     # Also mock shutil.rmtree to prevent it from trying to delete a real directory
     mock_rmtree = mocker.patch("shutil.rmtree")
 
-    # Call the function with a fake URL
-    result = clone_repo_to_temp("https://invalid/repo.git")
+    # Call the function with a fake URL and expect it to raise GitCommandError
+    import pytest
+    with pytest.raises(GitCommandError):
+        clone_repo_to_temp("https://invalid/repo.git")
 
-    # Assert that the function returned None as expected
-    assert result is None
     # Assert that the cleanup function (shutil.rmtree) was called
     mock_rmtree.assert_called_once()

@@ -1,7 +1,7 @@
-import os
-import tempfile
-import shutil
 import logging
+import os
+import shutil
+import tempfile
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -12,8 +12,10 @@ try:
     GIT_AVAILABLE = True
 except ImportError:
     GIT_AVAILABLE = False
-    class GitCommandError(Exception): pass
-    class Repo: pass
+    class GitCommandError(Exception):
+        pass
+    class Repo:
+        pass
     logger.warning("Git executable not found. Cloning will be disabled.")
 
 def clone_repo_to_temp(repo_url: str) -> str:

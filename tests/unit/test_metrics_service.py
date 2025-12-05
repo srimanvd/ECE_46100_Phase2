@@ -39,6 +39,8 @@ def test_compute_package_rating_github(mocker):
     # Mock dependencies at their source
     mocker.patch("src.utils.repo_cloner.clone_repo_to_temp", return_value="/tmp/fake_repo")
     mocker.patch("shutil.rmtree")
+    mocker.patch("os.path.exists", return_value=True)
+    mocker.patch("os.listdir", return_value=["file.txt"])
     
     # Mock load_metrics to return a controlled set
     def mock_metric(r): return (0.5, 5.0)
@@ -71,6 +73,8 @@ def test_compute_package_rating_huggingface(mocker):
     mocker.patch("src.utils.github_link_finder.find_github_url_from_hf", return_value="https://github.com/user/repo")
     mocker.patch("src.utils.repo_cloner.clone_repo_to_temp", return_value="/tmp/fake_repo")
     mocker.patch("shutil.rmtree")
+    mocker.patch("os.path.exists", return_value=True)
+    mocker.patch("os.listdir", return_value=["file.txt"])
     
     # Mock load_metrics
     def mock_metric(r): return (0.5, 5.0)

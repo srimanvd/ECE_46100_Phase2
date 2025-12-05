@@ -174,11 +174,11 @@ def compute_package_rating(url: str) -> PackageRating:
     # Reviewedness
     reviewedness_score = 0.0
     reviewedness_latency = 0.0
-    if local_path:
+    if cloned_path:
         try:
             from src.metrics.reviewedness import compute_reviewedness
             t0 = time.time()
-            res = compute_reviewedness(local_path)
+            res = compute_reviewedness(cloned_path)
             reviewedness_score = max(0.0, res.score) if res.score != -1.0 else 0.0
             reviewedness_latency = (time.time() - t0) * 1000
         except Exception as e:
@@ -187,11 +187,11 @@ def compute_package_rating(url: str) -> PackageRating:
     # Reproducibility
     reproducibility_score = 0.0
     reproducibility_latency = 0.0
-    if local_path:
+    if cloned_path:
         try:
             from src.metrics.reproducibility import compute_reproducibility
             t0 = time.time()
-            res = compute_reproducibility(local_path)
+            res = compute_reproducibility(cloned_path)
             reproducibility_score = max(0.0, res.score) if res.score != -1.0 else 0.0
             reproducibility_latency = (time.time() - t0) * 1000
         except Exception as e:

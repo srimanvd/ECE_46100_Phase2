@@ -25,7 +25,7 @@ def test_local_storage(sample_package):
     
     # Test Add
     storage.add_package(sample_package)
-    assert "test-id" in storage._packages
+    assert "test-id" in storage.packages
     
     # Test Get
     pkg = storage.get_package("test-id")
@@ -39,11 +39,11 @@ def test_local_storage(sample_package):
     
     # Test Delete
     storage.delete_package("test-id")
-    assert "test-id" not in storage._packages
+    assert "test-id" not in storage.packages
     
     # Test Reset
     storage.add_package(sample_package)
     storage.reset()
-    assert len(storage._packages) == 0
+    assert len(storage.packages) == 0
 
 
