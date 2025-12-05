@@ -40,6 +40,14 @@ class PackageRating(BaseModel):
     tree_score_latency: float
     reproducibility: float
     reproducibility_latency: float
+    performance_claims: float
+    performance_claims_latency: float
+    dataset_and_code_score: float
+    dataset_and_code_score_latency: float
+    dataset_quality: float
+    dataset_quality_latency: float
+    size: float
+    size_latency: float
     name: str | None = None
     category: str | None = None
 

@@ -105,7 +105,11 @@ def compute_package_rating(url: str) -> PackageRating:
             pull_request=0.6, pull_request_latency=0,
             net_score=0.6, net_score_latency=0,
             tree_score=0.6, tree_score_latency=0,
-            reproducibility=0.6, reproducibility_latency=0
+            reproducibility=0.6, reproducibility_latency=0,
+            performance_claims=0.6, performance_claims_latency=0,
+            dataset_and_code_score=0.6, dataset_and_code_score_latency=0,
+            dataset_quality=0.6, dataset_quality_latency=0,
+            size=0.6, size_latency=0
         )
 
     metrics = load_metrics()
@@ -231,5 +235,13 @@ def compute_package_rating(url: str) -> PackageRating:
         tree_score=treescore_score,
         tree_score_latency=treescore_latency,
         reproducibility=reproducibility_score,
-        reproducibility_latency=reproducibility_latency
+        reproducibility_latency=reproducibility_latency,
+        performance_claims=get_res("performance_claims")[0],
+        performance_claims_latency=get_res("performance_claims")[1],
+        dataset_and_code_score=get_res("dataset_and_code_score")[0],
+        dataset_and_code_score_latency=get_res("dataset_and_code_score")[1],
+        dataset_quality=get_res("dataset_quality")[0],
+        dataset_quality_latency=get_res("dataset_quality")[1],
+        size=get_res("size")[0],
+        size_latency=get_res("size")[1]
     )
