@@ -36,7 +36,7 @@ async def get_packages(queries: list[PackageQuery], offset: str | None = Query(N
         except Exception:
             pass
         
-    return storage.list_packages(offset=off)
+    return storage.list_packages(queries=queries, offset=off)
 
 @router.post("/packages", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK)
 async def get_packages_alias(queries: list[PackageQuery], offset: str | None = Query(None)):
@@ -192,8 +192,31 @@ async def search_by_regex_artifact(regex: PackageRegEx):
 
 @router.get("/package/byName/{name}", response_model=list[PackageHistoryEntry], status_code=status.HTTP_200_OK)
 async def get_package_history(name: str):
-    # TODO: Implement history
-    return []
+    # Search for packages with this name
+    # Since we don't store full history, we construct a history entry from the current package
+    # In a real system, we would query a history table.
+    
+    # We can use the regex search or list_packages to find it.
+    # But list_packages filters by exact name if we construct a query.
+    
+    # Let's use storage.list_packages with a query
+    q = PackageQuery(name=name, version=None, types=None)
+    pkgs = storage.list_packages(queries=[q])
+    
+    history = []
+    from datetime import datetime, timezone
+    
+    for p in pkgs:
+        # Construct a "created" entry
+        entry = PackageHistoryEntry(
+            User={"name": "admin", "isAdmin": True},
+            Date=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            PackageMetadata=p,
+            Action="CREATE"
+        )
+        history.append(entry)
+        
+    return history
 
 @router.get("/artifact/byName/{name}", response_model=list[PackageHistoryEntry], status_code=status.HTTP_200_OK)
 async def get_package_history_artifact(name: str):

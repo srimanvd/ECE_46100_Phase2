@@ -204,3 +204,39 @@ def test_upload_model():
     assert response.status_code == 201
     data = response.json()
     assert data["metadata"]["type"] == "model"
+
+def test_query_filtering():
+    client.delete("/reset")
+    # Upload a model
+    client.post("/artifact/model", json={"content": "UEsDBAoAAAAAA...", "jsprogram": "js"})
+    # Upload a dataset
+    client.post("/artifact/dataset", json={"content": "UEsDBAoAAAAAA...", "jsprogram": "js"})
+    
+    # Query for model
+    query = [{"name": "*", "types": ["model"]}]
+    response = client.post("/packages", json=query)
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["type"] == "model"
+    
+    # Query for dataset
+    query = [{"name": "*", "types": ["dataset"]}]
+    response = client.post("/packages", json=query)
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["type"] == "dataset"
+
+def test_get_history_by_name():
+    client.delete("/reset")
+    # Upload a package
+    client.post("/artifact/code", json={"content": "UEsDBAoAAAAAA...", "jsprogram": "js", "name": "history-test"})
+    
+    # Get history
+    response = client.get("/package/byName/history-test")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["PackageMetadata"]["name"] == "history-test"
+    assert data[0]["Action"] == "CREATE"

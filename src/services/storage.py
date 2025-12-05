@@ -1,6 +1,6 @@
 import os
 
-from src.api.models import Package, PackageMetadata
+from src.api.models import Package, PackageMetadata, PackageQuery
 
 
 class LocalStorage:
@@ -16,12 +16,39 @@ class LocalStorage:
     def get_package(self, package_id: str) -> Package | None:
         return self.packages.get(package_id)
 
-    def list_packages(self, offset: int = 0, limit: int = 10) -> list[PackageMetadata]:
-        print(f"DEBUG: LocalStorage list_packages offset={offset} limit={limit}")
+    def list_packages(self, queries: list[PackageQuery] | None = None, offset: int = 0, limit: int = 10) -> list[PackageMetadata]:
+        print(f"DEBUG: LocalStorage list_packages queries={queries} offset={offset} limit={limit}")
         all_packages = list(self.packages.values())
-        # Sort by ID or Name if needed, for now just slice
+        
+        # Filter
+        if not queries:
+             filtered = all_packages
+        else:
+            filtered = []
+            for pkg in all_packages:
+                match = False
+                for q in queries:
+                    # Name match (exact or wildcard)
+                    if q.name != "*" and q.name != pkg.metadata.name:
+                        continue
+                    
+                    # Version match (exact for now)
+                    if q.version and q.version != pkg.metadata.version:
+                        continue
+                        
+                    # Type match
+                    # q.types is list[str] e.g. ["code", "model"]
+                    # pkg.metadata.type is str e.g. "code"
+                    if q.types and pkg.metadata.type not in [t.lower() for t in q.types]:
+                        continue
+                        
+                    match = True
+                    break
+                if match:
+                    filtered.append(pkg)
+        
         # Pagination logic
-        return [p.metadata for p in all_packages[offset:offset+limit]]
+        return [p.metadata for p in filtered[offset:offset+limit]]
 
     def delete_package(self, package_id: str) -> bool:
         print(f"DEBUG: LocalStorage delete_package {package_id}")
@@ -97,30 +124,57 @@ class S3Storage:
         except ClientError:
             return None
 
-    def list_packages(self, offset: int = 0, limit: int = 10) -> list[PackageMetadata]:
-        print(f"DEBUG: S3 list_packages offset={offset} limit={limit}")
+    def list_packages(self, queries: list[PackageQuery] | None = None, offset: int = 0, limit: int = 10) -> list[PackageMetadata]:
+        print(f"DEBUG: S3 list_packages queries={queries} offset={offset} limit={limit}")
         paginator = self.s3.get_paginator('list_objects_v2')
         pages = paginator.paginate(Bucket=self.bucket, Prefix=self.prefix, Delimiter='/')
         
+        # In S3, we can't easily filter without reading metadata. 
+        # For this scale, we list all and filter in memory (inefficient but works for small scale).
+        # A better way would be using S3 Select or storing metadata in DynamoDB.
+        
         packages = []
+        # We need to scan until we find (offset + limit) matches
+        
         count = 0
+        skipped = 0
+        
         for page in pages:
-            # print(f"DEBUG: S3 list page: {page}") # Too verbose?
             for prefix in page.get('CommonPrefixes', []):
-                # prefix is packages/{id}/
                 pkg_id = prefix.get('Prefix').split('/')[-2]
-                # print(f"DEBUG: Found prefix {prefix} -> ID {pkg_id}")
                 pkg = self.get_package(pkg_id)
-                if pkg:
+                if not pkg:
+                    continue
+                
+                # Apply Filter
+                match = False
+                if not queries:
+                    match = True
+                else:
+                    for q in queries:
+                        if q.name != "*" and q.name != pkg.metadata.name:
+                            continue
+                        if q.version and q.version != pkg.metadata.version:
+                            continue
+                        if q.types and pkg.metadata.type not in [t.lower() for t in q.types]:
+                            continue
+                        match = True
+                        break
+                
+                if match:
+                    if skipped < offset:
+                        skipped += 1
+                        continue
+                    
                     packages.append(pkg.metadata)
                     count += 1
-                    if count >= limit + offset:
+                    if count >= limit:
                         break
-            if count >= limit + offset:
+            if count >= limit:
                 break
         
         print(f"DEBUG: S3 list_packages found {len(packages)} packages")
-        return packages[offset:offset+limit]
+        return packages
 
     def delete_package(self, package_id: str) -> bool:
         print(f"DEBUG: S3 delete_package {package_id}")
