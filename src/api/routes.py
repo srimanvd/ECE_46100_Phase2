@@ -23,7 +23,7 @@ def generate_id() -> str:
 
 # --- Endpoints ---
 
-@router.post("/artifacts", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK)
+@router.post("/artifacts", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK, response_model_by_alias=True)
 async def get_packages(queries: list[PackageQuery], offset: str | None = Query(None)):
     # The autograder sends POST /artifacts with a query body.
     # We should filter based on the query if possible, but for now returning all is safer for "Artifacts still present" check.
@@ -38,7 +38,7 @@ async def get_packages(queries: list[PackageQuery], offset: str | None = Query(N
         
     return storage.list_packages(offset=off)
 
-@router.post("/packages", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK)
+@router.post("/packages", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK, response_model_by_alias=True)
 async def get_packages_alias(queries: list[PackageQuery], offset: str | None = Query(None)):
     return await get_packages(queries, offset)
 
@@ -47,14 +47,14 @@ async def reset_registry():
     storage.reset()
     return {"message": "Registry is reset."}
 
-@router.get("/package/{id}", response_model=Package, status_code=status.HTTP_200_OK)
+@router.get("/package/{id}", response_model=Package, status_code=status.HTTP_200_OK, response_model_by_alias=True)
 async def get_package(id: str):
     pkg = storage.get_package(id)
     if not pkg:
         raise HTTPException(status_code=404, detail="Package not found")
     return pkg
 
-@router.get("/artifact/model/{id}", response_model=Package, status_code=status.HTTP_200_OK)
+@router.get("/artifact/model/{id}", response_model=Package, status_code=status.HTTP_200_OK, response_model_by_alias=True)
 async def get_package_model(id: str):
     return await get_package(id)
 
@@ -77,7 +77,7 @@ async def delete_package(id: str):
 async def delete_package_model(id: str):
     return await delete_package(id)
 
-@router.post("/package", response_model=Package, status_code=status.HTTP_201_CREATED)
+@router.post("/package", response_model=Package, status_code=status.HTTP_201_CREATED, response_model_by_alias=True)
 async def upload_package(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
     # Handle Ingest (URL) vs Upload (Content)
     
@@ -110,25 +110,25 @@ async def upload_package(package: PackageData, x_authorization: str | None = Hea
     else:
         raise HTTPException(status_code=400, detail="Provide either Content or URL, not both or neither.")
 
-@router.post("/artifact", response_model=Package, status_code=status.HTTP_201_CREATED)
+@router.post("/artifact", response_model=Package, status_code=status.HTTP_201_CREATED, response_model_by_alias=True)
 async def upload_artifact(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
     return await upload_package(package, x_authorization)
 
-@router.post("/artifact/model", response_model=Package, status_code=status.HTTP_201_CREATED)
+@router.post("/artifact/model", response_model=Package, status_code=status.HTTP_201_CREATED, response_model_by_alias=True)
 async def upload_artifact_model(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
     return await upload_package(package, x_authorization)
 
-@router.post("/artifact/dataset", response_model=Package, status_code=status.HTTP_201_CREATED)
+@router.post("/artifact/dataset", response_model=Package, status_code=status.HTTP_201_CREATED, response_model_by_alias=True)
 async def upload_artifact_dataset(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
     return await upload_package(package, x_authorization)
 
-@router.post("/artifact/code", response_model=Package, status_code=status.HTTP_201_CREATED)
+@router.post("/artifact/code", response_model=Package, status_code=status.HTTP_201_CREATED, response_model_by_alias=True)
 async def upload_artifact_code(package: PackageData, x_authorization: str | None = Header(None, alias="X-Authorization")):
     return await upload_package(package, x_authorization)
 
 # --- Plural Aliases for Autograder Compatibility ---
 
-@router.get("/artifacts/model/{id}", response_model=Package, status_code=status.HTTP_200_OK)
+@router.get("/artifacts/model/{id}", response_model=Package, status_code=status.HTTP_200_OK, response_model_by_alias=True)
 async def get_package_model_plural(id: str):
     return await get_package(id)
 
@@ -136,7 +136,7 @@ async def get_package_model_plural(id: str):
 async def delete_package_model_plural(id: str):
     return await delete_package(id)
 
-@router.get("/package/{id}/rate", response_model=PackageRating, status_code=status.HTTP_200_OK)
+@router.get("/package/{id}/rate", response_model=PackageRating, status_code=status.HTTP_200_OK, response_model_by_alias=True)
 async def rate_package(id: str):
     pkg = storage.get_package(id)
     if not pkg:
@@ -158,7 +158,7 @@ async def rate_package(id: str):
         Reproducibility=0, ReproducibilityLatency=0
     )
 
-@router.get("/artifact/model/{id}/rate", response_model=PackageRating, status_code=status.HTTP_200_OK)
+@router.get("/artifact/model/{id}/rate", response_model=PackageRating, status_code=status.HTTP_200_OK, response_model_by_alias=True)
 async def rate_package_model(id: str):
     return await rate_package(id)
 
@@ -182,20 +182,20 @@ async def get_global_lineage():
     # Stub for global lineage
     return {"lineage": []}
 
-@router.post("/package/byRegEx", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK)
+@router.post("/package/byRegEx", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK, response_model_by_alias=True)
 async def search_by_regex(regex: PackageRegEx):
     return storage.search_by_regex(regex.RegEx)
 
-@router.post("/artifact/byRegEx", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK)
+@router.post("/artifact/byRegEx", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK, response_model_by_alias=True)
 async def search_by_regex_artifact(regex: PackageRegEx):
     return await search_by_regex(regex)
 
-@router.get("/package/byName/{name}", response_model=list[PackageHistoryEntry], status_code=status.HTTP_200_OK)
+@router.get("/package/byName/{name}", response_model=list[PackageHistoryEntry], status_code=status.HTTP_200_OK, response_model_by_alias=True)
 async def get_package_history(name: str):
     # TODO: Implement history
     return []
 
-@router.get("/artifact/byName/{name}", response_model=list[PackageHistoryEntry], status_code=status.HTTP_200_OK)
+@router.get("/artifact/byName/{name}", response_model=list[PackageHistoryEntry], status_code=status.HTTP_200_OK, response_model_by_alias=True)
 async def get_package_history_artifact(name: str):
     return await get_package_history(name)
 

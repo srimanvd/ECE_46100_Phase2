@@ -4,9 +4,12 @@ from pydantic import BaseModel, Field
 # --- Package Models ---
 
 class PackageMetadata(BaseModel):
-    Name: str = Field(..., description="Package name")
-    Version: str = Field(..., description="Package version")
-    ID: str = Field(..., description="Package ID")
+    Name: str = Field(..., description="Package name", alias="name")
+    Version: str = Field(..., description="Package version", alias="version")
+    ID: str = Field(..., description="Package ID", alias="id")
+
+    class Config:
+        populate_by_name = True
 
 class PackageData(BaseModel):
     Content: str | None = Field(None, description="Base64 encoded zip file content", alias="content")
