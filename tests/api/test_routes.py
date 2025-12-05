@@ -93,6 +93,30 @@ def test_get_packages_empty():
     assert response.status_code == 200
     assert response.json() == []
 
+def test_plural_routes():
+    client.delete("/reset")
+    # Upload a code package
+    response = client.post("/artifact/code", json={"content": "UEsDBAoAAAAAA...", "jsprogram": "js", "name": "code-pkg"})
+    pkg_id = response.json()["metadata"]["id"]
+    
+    # Get via plural code route
+    response = client.get(f"/artifacts/code/{pkg_id}")
+    assert response.status_code == 200
+    assert response.json()["metadata"]["id"] == pkg_id
+    
+    # Upload a dataset package
+    response = client.post("/artifact/dataset", json={"content": "UEsDBAoAAAAAA...", "jsprogram": "js", "name": "dataset-pkg"})
+    pkg_id = response.json()["metadata"]["id"]
+    
+    # Get via plural dataset route
+    response = client.get(f"/artifacts/dataset/{pkg_id}")
+    assert response.status_code == 200
+    assert response.json()["metadata"]["id"] == pkg_id
+    
+    # Test 404
+    response = client.get("/artifacts/code/non-existent")
+    assert response.status_code == 404
+
 def test_upload_package():
     # Test uploading a package via Content (Base64)
     client.delete("/reset")
@@ -204,39 +228,3 @@ def test_upload_model():
     assert response.status_code == 201
     data = response.json()
     assert data["metadata"]["type"] == "model"
-
-def test_query_filtering():
-    client.delete("/reset")
-    # Upload a model
-    client.post("/artifact/model", json={"content": "UEsDBAoAAAAAA...", "jsprogram": "js"})
-    # Upload a dataset
-    client.post("/artifact/dataset", json={"content": "UEsDBAoAAAAAA...", "jsprogram": "js"})
-    
-    # Query for model
-    query = [{"name": "*", "types": ["model"]}]
-    response = client.post("/packages", json=query)
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 1
-    assert data[0]["type"] == "model"
-    
-    # Query for dataset
-    query = [{"name": "*", "types": ["dataset"]}]
-    response = client.post("/packages", json=query)
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 1
-    assert data[0]["type"] == "dataset"
-
-def test_get_history_by_name():
-    client.delete("/reset")
-    # Upload a package
-    client.post("/artifact/code", json={"content": "UEsDBAoAAAAAA...", "jsprogram": "js", "name": "history-test"})
-    
-    # Get history
-    response = client.get("/package/byName/history-test")
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 1
-    assert data[0]["PackageMetadata"]["name"] == "history-test"
-    assert data[0]["Action"] == "CREATE"

@@ -136,6 +136,22 @@ async def get_package_model_plural(id: str):
 async def delete_package_model_plural(id: str):
     return await delete_package(id)
 
+@router.get("/artifacts/dataset/{id}", response_model=Package, status_code=status.HTTP_200_OK)
+async def get_package_dataset_plural(id: str):
+    return await get_package(id)
+
+@router.delete("/artifacts/dataset/{id}", status_code=status.HTTP_200_OK)
+async def delete_package_dataset_plural(id: str):
+    return await delete_package(id)
+
+@router.get("/artifacts/code/{id}", response_model=Package, status_code=status.HTTP_200_OK)
+async def get_package_code_plural(id: str):
+    return await get_package(id)
+
+@router.delete("/artifacts/code/{id}", status_code=status.HTTP_200_OK)
+async def delete_package_code_plural(id: str):
+    return await delete_package(id)
+
 @router.get("/package/{id}/rate", response_model=PackageRating, status_code=status.HTTP_200_OK)
 async def rate_package(id: str):
     pkg = storage.get_package(id)
