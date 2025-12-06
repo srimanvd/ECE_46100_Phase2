@@ -22,22 +22,22 @@ class Package(BaseModel):
 class PackageRating(BaseModel):
     bus_factor: float
     bus_factor_latency: float
-    correctness: float
-    correctness_latency: float
+    code_quality: float
+    code_quality_latency: float
     ramp_up_time: float
     ramp_up_time_latency: float
     responsive_maintainer: float
     responsive_maintainer_latency: float
-    license_score: float
-    license_score_latency: float
+    license: float
+    license_latency: float
     good_pinning_practice: float
     good_pinning_practice_latency: float
-    pull_request: float
-    pull_request_latency: float
+    reviewedness: float
+    reviewedness_latency: float
     net_score: float
     net_score_latency: float
-    tree_score: float
-    tree_score_latency: float
+    treescore: float
+    treescore_latency: float
     reproducibility: float
     reproducibility_latency: float
     performance_claims: float
