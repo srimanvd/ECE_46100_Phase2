@@ -4,6 +4,7 @@ from fastapi import APIRouter, Header, HTTPException, Query, status
 
 from src.api.models import (
     AuthenticationRequest,
+    MetricScore,
     Package,
     PackageData,
     PackageHistoryEntry,
@@ -95,7 +96,7 @@ async def upload_package(package: PackageData, x_authorization: str | None = Hea
     if package.url and not package.content:
         # Ingest
         rating = compute_package_rating(package.url)
-        if rating.net_score < 0.5:
+        if rating.net_score.score < 0.5:
              raise HTTPException(status_code=424, detail="Package is not ingestible (score too low)")
         
         pkg_id = generate_id()
@@ -174,52 +175,38 @@ async def rate_package(id: str):
         # Map to snake_case
         return PackageRating(
             bus_factor=rating.bus_factor,
-            bus_factor_latency=rating.bus_factor_latency,
             code_quality=rating.code_quality,
-            code_quality_latency=rating.code_quality_latency,
             ramp_up_time=rating.ramp_up_time,
-            ramp_up_time_latency=rating.ramp_up_time_latency,
             responsive_maintainer=rating.responsive_maintainer,
-            responsive_maintainer_latency=rating.responsive_maintainer_latency,
             license=rating.license,
-            license_latency=rating.license_latency,
             good_pinning_practice=rating.good_pinning_practice,
-            good_pinning_practice_latency=rating.good_pinning_practice_latency,
             reviewedness=rating.reviewedness,
-            reviewedness_latency=rating.reviewedness_latency,
             net_score=rating.net_score,
-            net_score_latency=rating.net_score_latency,
             tree_score=rating.tree_score,
-            tree_score_latency=rating.tree_score_latency,
             reproducibility=rating.reproducibility,
-            reproducibility_latency=rating.reproducibility_latency,
             performance_claims=rating.performance_claims,
-            performance_claims_latency=rating.performance_claims_latency,
             dataset_and_code_score=rating.dataset_and_code_score,
-            dataset_and_code_score_latency=rating.dataset_and_code_score_latency,
             dataset_quality=rating.dataset_quality,
-            dataset_quality_latency=rating.dataset_quality_latency,
             size_score=rating.size_score,
-            size_score_latency=rating.size_score_latency,
             name=pkg.metadata.name,
             category=pkg.metadata.type.lower() if pkg.metadata.type else "code"
         )
     
     return PackageRating(
-        bus_factor=0, bus_factor_latency=0,
-        code_quality=0, code_quality_latency=0,
-        ramp_up_time=0, ramp_up_time_latency=0,
-        responsive_maintainer=0, responsive_maintainer_latency=0,
-        license=0, license_latency=0,
-        good_pinning_practice=0, good_pinning_practice_latency=0,
-        reviewedness=0, reviewedness_latency=0,
-        net_score=0, net_score_latency=0,
-        tree_score=0, tree_score_latency=0,
-        reproducibility=0, reproducibility_latency=0,
-        performance_claims=0, performance_claims_latency=0,
-        dataset_and_code_score=0, dataset_and_code_score_latency=0,
-        dataset_quality=0, dataset_quality_latency=0,
-        size_score=0, size_score_latency=0,
+        bus_factor=MetricScore(score=0, latency=0),
+        code_quality=MetricScore(score=0, latency=0),
+        ramp_up_time=MetricScore(score=0, latency=0),
+        responsive_maintainer=MetricScore(score=0, latency=0),
+        license=MetricScore(score=0, latency=0),
+        good_pinning_practice=MetricScore(score=0, latency=0),
+        reviewedness=MetricScore(score=0, latency=0),
+        net_score=MetricScore(score=0, latency=0),
+        tree_score=MetricScore(score=0, latency=0),
+        reproducibility=MetricScore(score=0, latency=0),
+        performance_claims=MetricScore(score=0, latency=0),
+        dataset_and_code_score=MetricScore(score=0, latency=0),
+        dataset_quality=MetricScore(score=0, latency=0),
+        size_score=MetricScore(score=0, latency=0),
         name=pkg.metadata.name,
         category=pkg.metadata.type.lower() if pkg.metadata.type else "code"
     )

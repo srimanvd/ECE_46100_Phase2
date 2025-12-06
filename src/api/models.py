@@ -19,35 +19,25 @@ class Package(BaseModel):
     metadata: PackageMetadata
     data: PackageData
 
+class MetricScore(BaseModel):
+    score: float
+    latency: float
+
 class PackageRating(BaseModel):
-    bus_factor: float
-    bus_factor_latency: float
-    code_quality: float
-    code_quality_latency: float
-    ramp_up_time: float
-    ramp_up_time_latency: float
-    responsive_maintainer: float
-    responsive_maintainer_latency: float
-    license: float
-    license_latency: float
-    good_pinning_practice: float
-    good_pinning_practice_latency: float
-    reviewedness: float
-    reviewedness_latency: float
-    net_score: float
-    net_score_latency: float
-    tree_score: float
-    tree_score_latency: float
-    reproducibility: float
-    reproducibility_latency: float
-    performance_claims: float
-    performance_claims_latency: float
-    dataset_and_code_score: float
-    dataset_and_code_score_latency: float
-    dataset_quality: float
-    dataset_quality_latency: float
-    size_score: float
-    size_score_latency: float
+    bus_factor: MetricScore
+    code_quality: MetricScore
+    ramp_up_time: MetricScore
+    responsive_maintainer: MetricScore
+    license: MetricScore
+    good_pinning_practice: MetricScore
+    reviewedness: MetricScore
+    net_score: MetricScore
+    tree_score: MetricScore
+    reproducibility: MetricScore
+    performance_claims: MetricScore
+    dataset_and_code_score: MetricScore
+    dataset_quality: MetricScore
+    size_score: MetricScore
     name: str | None = None
     category: str | None = None
 
