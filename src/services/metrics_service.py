@@ -96,20 +96,20 @@ def compute_package_rating(url: str) -> PackageRating:
             
         # Return scores that pass ingestion (NetScore >= 0.5)
         return PackageRating(
-            bus_factor=MetricScore(score=0.6, latency=0),
-            code_quality=MetricScore(score=0.6, latency=0),
-            ramp_up_time=MetricScore(score=0.6, latency=0),
-            responsive_maintainer=MetricScore(score=0.6, latency=0),
-            license=MetricScore(score=1.0, latency=0),
-            good_pinning_practice=MetricScore(score=0.6, latency=0),
-            reviewedness=MetricScore(score=0.6, latency=0),
-            net_score=MetricScore(score=0.6, latency=0),
-            tree_score=MetricScore(score=0.6, latency=0),
-            reproducibility=MetricScore(score=0.6, latency=0),
-            performance_claims=MetricScore(score=0.6, latency=0),
-            dataset_and_code_score=MetricScore(score=0.6, latency=0),
-            dataset_quality=MetricScore(score=0.6, latency=0),
-            size_score=MetricScore(score=0.6, latency=0)
+            bus_factor=MetricScore(score=0.6, latency=0), bus_factor_latency=0,
+            code_quality=MetricScore(score=0.6, latency=0), code_quality_latency=0,
+            ramp_up_time=MetricScore(score=0.6, latency=0), ramp_up_time_latency=0,
+            responsive_maintainer=MetricScore(score=0.6, latency=0), responsive_maintainer_latency=0,
+            license=MetricScore(score=1.0, latency=0), license_latency=0,
+            good_pinning_practice=MetricScore(score=0.6, latency=0), good_pinning_practice_latency=0,
+            reviewedness=MetricScore(score=0.6, latency=0), reviewedness_latency=0,
+            net_score=MetricScore(score=0.6, latency=0), net_score_latency=0,
+            tree_score=MetricScore(score=0.6, latency=0), tree_score_latency=0,
+            reproducibility=MetricScore(score=0.6, latency=0), reproducibility_latency=0,
+            performance_claims=MetricScore(score=0.6, latency=0), performance_claims_latency=0,
+            dataset_and_code_score=MetricScore(score=0.6, latency=0), dataset_and_code_score_latency=0,
+            dataset_quality=MetricScore(score=0.6, latency=0), dataset_quality_latency=0,
+            size_score=MetricScore(score=0.6, latency=0), size_score_latency=0
         )
 
     metrics = load_metrics()
@@ -217,17 +217,31 @@ def compute_package_rating(url: str) -> PackageRating:
 
     return PackageRating(
         bus_factor=MetricScore(score=get_res("bus_factor")[0], latency=get_res("bus_factor")[1]),
+        bus_factor_latency=get_res("bus_factor")[1],
         code_quality=MetricScore(score=get_res("code_quality")[0], latency=get_res("code_quality")[1]),
+        code_quality_latency=get_res("code_quality")[1],
         ramp_up_time=MetricScore(score=get_res("ramp_up_time")[0], latency=get_res("ramp_up_time")[1]),
+        ramp_up_time_latency=get_res("ramp_up_time")[1],
         responsive_maintainer=MetricScore(score=get_res("responsive_maintainer")[0], latency=get_res("responsive_maintainer")[1]),
+        responsive_maintainer_latency=get_res("responsive_maintainer")[1],
         license=MetricScore(score=get_res("license")[0], latency=get_res("license")[1]),
+        license_latency=get_res("license")[1],
         good_pinning_practice=MetricScore(score=get_res("good_pinning_practice")[0], latency=get_res("good_pinning_practice")[1]),
+        good_pinning_practice_latency=get_res("good_pinning_practice")[1],
         reviewedness=MetricScore(score=reviewedness_score, latency=reviewedness_latency),
+        reviewedness_latency=reviewedness_latency,
         net_score=MetricScore(score=net_score_val, latency=net_score_lat),
+        net_score_latency=net_score_lat,
         tree_score=MetricScore(score=treescore_score, latency=treescore_latency),
+        tree_score_latency=treescore_latency,
         reproducibility=MetricScore(score=reproducibility_score, latency=reproducibility_latency),
+        reproducibility_latency=reproducibility_latency,
         performance_claims=MetricScore(score=get_res("performance_claims")[0], latency=get_res("performance_claims")[1]),
+        performance_claims_latency=get_res("performance_claims")[1],
         dataset_and_code_score=MetricScore(score=get_res("dataset_and_code_score")[0], latency=get_res("dataset_and_code_score")[1]),
+        dataset_and_code_score_latency=get_res("dataset_and_code_score")[1],
         dataset_quality=MetricScore(score=get_res("dataset_quality")[0], latency=get_res("dataset_quality")[1]),
-        size_score=MetricScore(score=get_res("size")[0], latency=get_res("size")[1])
+        dataset_quality_latency=get_res("dataset_quality")[1],
+        size_score=MetricScore(score=get_res("size")[0], latency=get_res("size")[1]),
+        size_score_latency=get_res("size")[1]
     )
