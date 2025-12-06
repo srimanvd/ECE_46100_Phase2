@@ -97,7 +97,7 @@ async def upload_package(package: PackageData, x_authorization: str | None = Hea
     if package.url and not package.content:
         # Ingest
         rating = compute_package_rating(package.url)
-        if rating.net_score.score < 0.5:
+        if rating.net_score < 0.5:
              raise HTTPException(status_code=424, detail="Package is not ingestible (score too low)")
         
         pkg_id = generate_id()
@@ -208,19 +208,19 @@ async def rate_package(id: str):
         )
     
     return PackageRating(
-        bus_factor=MetricScore(score=0, latency=0), bus_factor_latency=0,
-        code_quality=MetricScore(score=0, latency=0), code_quality_latency=0,
-        ramp_up_time=MetricScore(score=0, latency=0), ramp_up_time_latency=0,
-        responsive_maintainer=MetricScore(score=0, latency=0), responsive_maintainer_latency=0,
-        license=MetricScore(score=0, latency=0), license_latency=0,
-        good_pinning_practice=MetricScore(score=0, latency=0), good_pinning_practice_latency=0,
-        reviewedness=MetricScore(score=0, latency=0), reviewedness_latency=0,
-        net_score=MetricScore(score=0, latency=0), net_score_latency=0,
-        tree_score=MetricScore(score=0, latency=0), tree_score_latency=0,
-        reproducibility=MetricScore(score=0, latency=0), reproducibility_latency=0,
-        performance_claims=MetricScore(score=0, latency=0), performance_claims_latency=0,
-        dataset_and_code_score=MetricScore(score=0, latency=0), dataset_and_code_score_latency=0,
-        dataset_quality=MetricScore(score=0, latency=0), dataset_quality_latency=0,
+        bus_factor=0, bus_factor_latency=0,
+        code_quality=0, code_quality_latency=0,
+        ramp_up_time=0, ramp_up_time_latency=0,
+        responsive_maintainer=0, responsive_maintainer_latency=0,
+        license=0, license_latency=0,
+        good_pinning_practice=0, good_pinning_practice_latency=0,
+        reviewedness=0, reviewedness_latency=0,
+        net_score=0, net_score_latency=0,
+        tree_score=0, tree_score_latency=0,
+        reproducibility=0, reproducibility_latency=0,
+        performance_claims=0, performance_claims_latency=0,
+        dataset_and_code_score=0, dataset_and_code_score_latency=0,
+        dataset_quality=0, dataset_quality_latency=0,
         size_score=SizeScore(raspberry_pi=0, jetson_nano=0, desktop_pc=0, aws_server=0), size_score_latency=0,
         name=pkg.metadata.name,
         category=pkg.metadata.type.lower() if pkg.metadata.type else "code"

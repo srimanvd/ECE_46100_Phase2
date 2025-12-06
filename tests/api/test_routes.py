@@ -28,19 +28,19 @@ def test_ingest_package():
     
     with patch("src.api.routes.compute_package_rating") as mock_rate:
         mock_rate.return_value = PackageRating(
-            bus_factor=MetricScore(score=1, latency=0), bus_factor_latency=0,
-            code_quality=MetricScore(score=1, latency=0), code_quality_latency=0,
-            ramp_up_time=MetricScore(score=1, latency=0), ramp_up_time_latency=0,
-            responsive_maintainer=MetricScore(score=1, latency=0), responsive_maintainer_latency=0,
-            license=MetricScore(score=1, latency=0), license_latency=0,
-            good_pinning_practice=MetricScore(score=1, latency=0), good_pinning_practice_latency=0,
-            reviewedness=MetricScore(score=1, latency=0), reviewedness_latency=0,
-            net_score=MetricScore(score=1.0, latency=0), net_score_latency=0,
-            tree_score=MetricScore(score=1.0, latency=0), tree_score_latency=0,
-            reproducibility=MetricScore(score=1.0, latency=0), reproducibility_latency=0,
-            performance_claims=MetricScore(score=1.0, latency=0), performance_claims_latency=0,
-            dataset_and_code_score=MetricScore(score=1.0, latency=0), dataset_and_code_score_latency=0,
-            dataset_quality=MetricScore(score=1.0, latency=0), dataset_quality_latency=0,
+            bus_factor=1, bus_factor_latency=0,
+            code_quality=1, code_quality_latency=0,
+            ramp_up_time=1, ramp_up_time_latency=0,
+            responsive_maintainer=1, responsive_maintainer_latency=0,
+            license=1, license_latency=0,
+            good_pinning_practice=1, good_pinning_practice_latency=0,
+            reviewedness=1, reviewedness_latency=0,
+            net_score=1.0, net_score_latency=0,
+            tree_score=1.0, tree_score_latency=0,
+            reproducibility=1.0, reproducibility_latency=0,
+            performance_claims=1.0, performance_claims_latency=0,
+            dataset_and_code_score=1.0, dataset_and_code_score_latency=0,
+            dataset_quality=1.0, dataset_quality_latency=0,
             size_score=SizeScore(raspberry_pi=1.0, jetson_nano=1.0, desktop_pc=1.0, aws_server=1.0), size_score_latency=0
         )
         
@@ -69,19 +69,19 @@ def test_rate_package():
     
     with patch("src.api.routes.compute_package_rating") as mock_rate:
         mock_rate.return_value = PackageRating(
-            bus_factor=MetricScore(score=0.8, latency=10), bus_factor_latency=10,
-            code_quality=MetricScore(score=0.9, latency=10), code_quality_latency=10,
-            ramp_up_time=MetricScore(score=0.7, latency=10), ramp_up_time_latency=10,
-            responsive_maintainer=MetricScore(score=0.6, latency=10), responsive_maintainer_latency=10,
-            license=MetricScore(score=1.0, latency=10), license_latency=10,
-            good_pinning_practice=MetricScore(score=1.0, latency=10), good_pinning_practice_latency=10,
-            reviewedness=MetricScore(score=0.5, latency=10), reviewedness_latency=10,
-            net_score=MetricScore(score=0.85, latency=70), net_score_latency=70,
-            tree_score=MetricScore(score=0.5, latency=10), tree_score_latency=10,
-            reproducibility=MetricScore(score=0.5, latency=10), reproducibility_latency=10,
-            performance_claims=MetricScore(score=0.5, latency=10), performance_claims_latency=10,
-            dataset_and_code_score=MetricScore(score=0.5, latency=10), dataset_and_code_score_latency=10,
-            dataset_quality=MetricScore(score=0.5, latency=10), dataset_quality_latency=10,
+            bus_factor=0.8, bus_factor_latency=10,
+            code_quality=0.9, code_quality_latency=10,
+            ramp_up_time=0.7, ramp_up_time_latency=10,
+            responsive_maintainer=0.6, responsive_maintainer_latency=10,
+            license=1.0, license_latency=10,
+            good_pinning_practice=1.0, good_pinning_practice_latency=10,
+            reviewedness=0.5, reviewedness_latency=10,
+            net_score=0.85, net_score_latency=70,
+            tree_score=0.5, tree_score_latency=10,
+            reproducibility=0.5, reproducibility_latency=10,
+            performance_claims=0.5, performance_claims_latency=10,
+            dataset_and_code_score=0.5, dataset_and_code_score_latency=10,
+            dataset_quality=0.5, dataset_quality_latency=10,
             size_score=SizeScore(raspberry_pi=0.5, jetson_nano=0.5, desktop_pc=0.5, aws_server=0.5), size_score_latency=10
         )
         
@@ -94,7 +94,7 @@ def test_rate_package():
         response = client.get(f"/package/{pkg_id}/rate")
         assert response.status_code == 200
         data = response.json()
-        assert data["net_score"]["score"] == 0.85
+        assert data["net_score"] == 0.85
         assert data["net_score_latency"] == 70
 
 def test_get_packages_empty():
@@ -104,19 +104,19 @@ def test_get_packages_empty():
     from src.api.models import PackageRating
     with patch("src.api.routes.compute_package_rating") as mock_rate:
         mock_rate.return_value = PackageRating(
-            bus_factor=MetricScore(score=1, latency=0), bus_factor_latency=0,
-            code_quality=MetricScore(score=1, latency=0), code_quality_latency=0,
-            ramp_up_time=MetricScore(score=1, latency=0), ramp_up_time_latency=0,
-            responsive_maintainer=MetricScore(score=1, latency=0), responsive_maintainer_latency=0,
-            license=MetricScore(score=1, latency=0), license_latency=0,
-            good_pinning_practice=MetricScore(score=1, latency=0), good_pinning_practice_latency=0,
-            reviewedness=MetricScore(score=1, latency=0), reviewedness_latency=0,
-            net_score=MetricScore(score=1.0, latency=0), net_score_latency=0,
-            tree_score=MetricScore(score=1.0, latency=0), tree_score_latency=0,
-            reproducibility=MetricScore(score=1.0, latency=0), reproducibility_latency=0,
-            performance_claims=MetricScore(score=1.0, latency=0), performance_claims_latency=0,
-            dataset_and_code_score=MetricScore(score=1.0, latency=0), dataset_and_code_score_latency=0,
-            dataset_quality=MetricScore(score=1.0, latency=0), dataset_quality_latency=0,
+            bus_factor=1, bus_factor_latency=0,
+            code_quality=1, code_quality_latency=0,
+            ramp_up_time=1, ramp_up_time_latency=0,
+            responsive_maintainer=1, responsive_maintainer_latency=0,
+            license=1, license_latency=0,
+            good_pinning_practice=1, good_pinning_practice_latency=0,
+            reviewedness=1, reviewedness_latency=0,
+            net_score=1.0, net_score_latency=0,
+            tree_score=1.0, tree_score_latency=0,
+            reproducibility=1.0, reproducibility_latency=0,
+            performance_claims=1.0, performance_claims_latency=0,
+            dataset_and_code_score=1.0, dataset_and_code_score_latency=0,
+            dataset_quality=1.0, dataset_quality_latency=0,
             size_score=SizeScore(raspberry_pi=1.0, jetson_nano=1.0, desktop_pc=1.0, aws_server=1.0), size_score_latency=0
         )
         for i in range(15):
@@ -168,7 +168,7 @@ def test_rate_and_cost_structure():
     assert response.status_code == 200
     data = response.json()
     # Should be 0s
-    assert data["net_score"]["score"] == 0
+    assert data["net_score"] == 0
     assert data["name"] == "rate-test"
     assert data["category"] == "code"
     assert "bus_factor" in data # Check lowercase
@@ -190,19 +190,19 @@ def test_upload_package():
     
     with patch("src.api.routes.compute_package_rating") as mock_rate:
         mock_rate.return_value = PackageRating(
-            bus_factor=MetricScore(score=1, latency=0), bus_factor_latency=0,
-            code_quality=MetricScore(score=1, latency=0), code_quality_latency=0,
-            ramp_up_time=MetricScore(score=1, latency=0), ramp_up_time_latency=0,
-            responsive_maintainer=MetricScore(score=1, latency=0), responsive_maintainer_latency=0,
-            license=MetricScore(score=1, latency=0), license_latency=0,
-            good_pinning_practice=MetricScore(score=1, latency=0), good_pinning_practice_latency=0,
-            reviewedness=MetricScore(score=1, latency=0), reviewedness_latency=0,
-            net_score=MetricScore(score=1.0, latency=0), net_score_latency=0,
-            tree_score=MetricScore(score=1.0, latency=0), tree_score_latency=0,
-            reproducibility=MetricScore(score=1.0, latency=0), reproducibility_latency=0,
-            performance_claims=MetricScore(score=1.0, latency=0), performance_claims_latency=0,
-            dataset_and_code_score=MetricScore(score=1.0, latency=0), dataset_and_code_score_latency=0,
-            dataset_quality=MetricScore(score=1.0, latency=0), dataset_quality_latency=0,
+            bus_factor=1, bus_factor_latency=0,
+            code_quality=1, code_quality_latency=0,
+            ramp_up_time=1, ramp_up_time_latency=0,
+            responsive_maintainer=1, responsive_maintainer_latency=0,
+            license=1, license_latency=0,
+            good_pinning_practice=1, good_pinning_practice_latency=0,
+            reviewedness=1, reviewedness_latency=0,
+            net_score=1.0, net_score_latency=0,
+            tree_score=1.0, tree_score_latency=0,
+            reproducibility=1.0, reproducibility_latency=0,
+            performance_claims=1.0, performance_claims_latency=0,
+            dataset_and_code_score=1.0, dataset_and_code_score_latency=0,
+            dataset_quality=1.0, dataset_quality_latency=0,
             size_score=SizeScore(raspberry_pi=1.0, jetson_nano=1.0, desktop_pc=1.0, aws_server=1.0), size_score_latency=0
         )
         
@@ -245,19 +245,19 @@ def test_search_by_regex():
     from src.api.models import PackageRating
     with patch("src.api.routes.compute_package_rating") as mock_rate:
          mock_rate.return_value = PackageRating(
-            bus_factor=MetricScore(score=0.5, latency=0), bus_factor_latency=0,
-            code_quality=MetricScore(score=0.5, latency=0), code_quality_latency=0,
-            ramp_up_time=MetricScore(score=0.5, latency=0), ramp_up_time_latency=0,
-            responsive_maintainer=MetricScore(score=0.5, latency=0), responsive_maintainer_latency=0,
-            license=MetricScore(score=0.5, latency=0), license_latency=0,
-            good_pinning_practice=MetricScore(score=0.5, latency=0), good_pinning_practice_latency=0,
-            reviewedness=MetricScore(score=0.5, latency=0), reviewedness_latency=0,
-            net_score=MetricScore(score=0.5, latency=0), net_score_latency=0,
-            tree_score=MetricScore(score=0.5, latency=0), tree_score_latency=0,
-            reproducibility=MetricScore(score=0.5, latency=0), reproducibility_latency=0,
-            performance_claims=MetricScore(score=0.5, latency=0), performance_claims_latency=0,
-            dataset_and_code_score=MetricScore(score=0.5, latency=0), dataset_and_code_score_latency=0,
-            dataset_quality=MetricScore(score=0.5, latency=0), dataset_quality_latency=0,
+            bus_factor=0.5, bus_factor_latency=0,
+            code_quality=0.5, code_quality_latency=0,
+            ramp_up_time=0.5, ramp_up_time_latency=0,
+            responsive_maintainer=0.5, responsive_maintainer_latency=0,
+            license=0.5, license_latency=0,
+            good_pinning_practice=0.5, good_pinning_practice_latency=0,
+            reviewedness=0.5, reviewedness_latency=0,
+            net_score=0.5, net_score_latency=0,
+            tree_score=0.5, tree_score_latency=0,
+            reproducibility=0.5, reproducibility_latency=0,
+            performance_claims=0.5, performance_claims_latency=0,
+            dataset_and_code_score=0.5, dataset_and_code_score_latency=0,
+            dataset_quality=0.5, dataset_quality_latency=0,
             size_score=SizeScore(raspberry_pi=0.5, jetson_nano=0.5, desktop_pc=0.5, aws_server=0.5), size_score_latency=0
          )
          client.post("/package", json={"url": "https://github.com/test/regex", "jsprogram": "js"})
@@ -311,7 +311,7 @@ def test_rate_package_no_url():
     assert response.status_code == 200
     data = response.json()
     # Expect all 0s
-    assert data["net_score"]["score"] == 0
+    assert data["net_score"] == 0
 
 def test_upload_model():
     client.delete("/reset")
