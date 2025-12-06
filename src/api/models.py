@@ -36,8 +36,8 @@ class PackageRating(BaseModel):
     reviewedness_latency: float
     net_score: float
     net_score_latency: float
-    treescore: float
-    treescore_latency: float
+    tree_score: float
+    tree_score_latency: float
     reproducibility: float
     reproducibility_latency: float
     performance_claims: float
