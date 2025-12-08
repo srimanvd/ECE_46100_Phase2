@@ -2,6 +2,9 @@ import logging
 import os
 import shutil
 import tempfile
+import requests
+import zipfile
+import io
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -16,31 +19,73 @@ except ImportError:
         pass
     class Repo:
         pass
-    logger.warning("Git executable not found. Cloning will be disabled.")
+    logger.warning("Git executable not found. Cloning will be disabled, falling back to zip download.")
+
+def download_repo_zip(repo_url: str) -> str:
+    """
+    Downloads a repository as a zip file and extracts it to a temporary directory.
+    Supports GitHub URLs.
+    """
+    # Normalize URL
+    url = repo_url.rstrip("/")
+    if url.endswith(".git"):
+        url = url[:-4]
+    
+    # Construct zip URL (assuming GitHub for now)
+    # Try HEAD first
+    zip_url = f"{url}/archive/HEAD.zip"
+    
+    logger.info(f"Attempting to download zip from {zip_url}")
+    
+    headers = {}
+    token = os.environ.get("GITHUB_TOKEN")
+    if token and not token.startswith("ghp_REPLACE"):
+        headers["Authorization"] = f"token {token}"
+    
+    try:
+        response = requests.get(zip_url, headers=headers, stream=True, timeout=30)
+        response.raise_for_status()
+        
+        temp_dir = tempfile.mkdtemp()
+        with zipfile.ZipFile(io.BytesIO(response.content)) as z:
+            z.extractall(temp_dir)
+            
+        # The zip usually contains a top-level directory (e.g., repo-main)
+        # We want to return the path to that directory, or the temp_dir if flat
+        entries = os.listdir(temp_dir)
+        if len(entries) == 1 and os.path.isdir(os.path.join(temp_dir, entries[0])):
+            return os.path.join(temp_dir, entries[0])
+        return temp_dir
+        
+    except Exception as e:
+        logger.error(f"Failed to download zip: {e}")
+        raise e
 
 def clone_repo_to_temp(repo_url: str) -> str:
     """
     Clones a git repository to a temporary directory.
+    Falls back to zip download if git is unavailable or fails.
     Returns the path to the temporary directory.
     """
-    if not GIT_AVAILABLE:
-        logger.warning(f"Git not available. Skipping clone for {repo_url}")
-        # Create an empty temp dir to satisfy return type, but it will be empty
-        return tempfile.mkdtemp()
-
-    temp_dir = None # Initialize temp_dir to None
+    temp_dir = None
+    
+    # Try Git Clone first if available
+    if GIT_AVAILABLE:
+        try:
+            temp_dir = tempfile.mkdtemp()
+            logger.info(f"Cloning {repo_url} to {temp_dir}")
+            Repo.clone_from(repo_url, temp_dir, depth=1)
+            return temp_dir
+        except Exception as e:
+            logger.warning(f"Git clone failed: {e}. Falling back to zip download.")
+            if temp_dir and os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+            # Fall through to zip download
+    
+    # Fallback to Zip Download
     try:
-        temp_dir = tempfile.mkdtemp()
-        logger.info(f"Cloning {repo_url} to {temp_dir}")
-        Repo.clone_from(repo_url, temp_dir, depth=1)
-        return temp_dir
-    except GitCommandError as e:
-        logger.error(f"Error cloning repository: {e}")
-        if temp_dir and os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
-        raise e
+        return download_repo_zip(repo_url)
     except Exception as e:
-        logger.error(f"Unexpected error during cloning: {e}")
-        if temp_dir and os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
+        logger.error(f"Zip download also failed: {e}")
         raise e
+
