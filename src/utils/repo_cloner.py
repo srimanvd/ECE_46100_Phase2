@@ -32,18 +32,32 @@ def download_repo_zip(repo_url: str) -> str:
         url = url[:-4]
     
     # Construct zip URL (assuming GitHub for now)
-    # Try HEAD first
-    zip_url = f"{url}/archive/HEAD.zip"
-    
-    logger.info(f"Attempting to download zip from {zip_url}")
+    # Try HEAD first, then main, then master
+    branches = ["HEAD", "main", "master"]
     
     headers = {}
     token = os.environ.get("GITHUB_TOKEN")
     if token and not token.startswith("ghp_REPLACE"):
         headers["Authorization"] = f"token {token}"
     
-    try:
-        response = requests.get(zip_url, headers=headers, stream=True, timeout=30)
+    for branch in branches:
+        zip_url = f"{url}/archive/refs/heads/{branch}.zip"
+        if branch == "HEAD":
+             zip_url = f"{url}/archive/HEAD.zip"
+            
+        logger.info(f"Attempting to download zip from {zip_url}")
+        
+        try:
+            response = requests.get(zip_url, headers=headers, stream=True, timeout=30)
+            if response.status_code == 200:
+                break
+        except Exception:
+            continue
+    else:
+        # If loop finishes without break
+        raise Exception(f"Could not download zip from {url} (tried HEAD, main, master)")
+
+    response.raise_for_status()
         response.raise_for_status()
         
         temp_dir = tempfile.mkdtemp()
