@@ -58,7 +58,6 @@ def download_repo_zip(repo_url: str) -> str:
         raise Exception(f"Could not download zip from {url} (tried HEAD, main, master)")
 
     response.raise_for_status()
-        response.raise_for_status()
         
         temp_dir = tempfile.mkdtemp()
         with zipfile.ZipFile(io.BytesIO(response.content)) as z:
