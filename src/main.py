@@ -4,6 +4,7 @@ from mangum import Mangum
 
 from src.api.routes import router
 
+# Trigger deploy
 app = FastAPI(title="Trustworthy Model Registry", version="1.0.0", root_path="/default")
 
 # CORS
