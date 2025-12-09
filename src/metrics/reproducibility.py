@@ -190,61 +190,6 @@ def compute_reproducibility(
         timeout_seconds=timeout_seconds,
     )
 
-def metric(resource: dict) -> tuple[float, int]:
-    """
-    Reproducibility metric using GitHub API.
-    Checks for demo scripts, Dockerfile, or Colab links.
-    """
-    t0 = time.time()
-    score = 0.0
-    
-    url = resource.get("url", "")
-    if "github.com" in url:
-        try:
-            parts = url.rstrip("/").split("/")
-            if len(parts) >= 2:
-                owner, repo = parts[-2], parts[-1]
-                from src.utils.github_api import GitHubAPI
-                api = GitHubAPI()
-                
-                contents = api.get_contents(owner, repo)
-                if contents and isinstance(contents, list):
-                    files = {item["name"] for item in contents}
-                    
-                    # Check for demo scripts
-                    demos = {"demo.py", "inference.py", "app.py", "run.py", "example.py", "examples"}
-                    found_demos = demos.intersection(files)
-                    
-                    if found_demos:
-                        score = 1.0 # High confidence
-                    elif "scripts" in files:
-                        score = 0.8
-                    elif "Dockerfile" in files:
-                        score = 0.8
-                    else:
-                        # Check README for "Colab" or "Hugging Face Spaces"
-                        readme = api.get_readme(owner, repo)
-                        if readme:
-                            if "colab.research.google.com" in readme or "huggingface.co/spaces" in readme:
-                                score = 1.0
-                            else:
-                                score = 0.0
-                        else:
-                            score = 0.0
-        except Exception:
-            score = 0.0
-            
-    # Fallback to local check if available
-    local_dir = resource.get("local_dir") or resource.get("local_path")
-    if score == 0.0 and local_dir:
-        try:
-            res = compute_reproducibility(local_dir)
-            score = max(0.0, res.score) if res.score != -1.0 else 0.0
-        except Exception:
-            pass
-
-    latency_ms = int((time.time() - t0) * 1000)
-    return float(score), latency_ms
 
 if __name__ == "__main__":
     # Small CLI for manual testing

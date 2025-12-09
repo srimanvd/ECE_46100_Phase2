@@ -167,22 +167,10 @@ def metric(resource: dict[str, Any]) -> tuple[float, int]:
     t0 = time.perf_counter()
     try:
         content: str | None = None
-        
-        # 0) Try GitHub API first
-        url = resource.get("url", "")
-        if "github.com" in url:
-            try:
-                parts = url.rstrip("/").split("/")
-                if len(parts) >= 2:
-                    from src.utils.github_api import GitHubAPI
-                    api = GitHubAPI()
-                    content = api.get_readme(parts[-2], parts[-1])
-            except Exception:
-                pass
 
         # 1) Prefer local README if present (fast and deterministic)
         local_dir = resource.get("local_dir") or resource.get("local_path") or None
-        if not content and local_dir and isinstance(local_dir, str):
+        if local_dir and isinstance(local_dir, str):
             content = _read_local_readme(local_dir)
 
         # 2) If no local README, try remote fetch (best-effort; requires 'requests' in env)
