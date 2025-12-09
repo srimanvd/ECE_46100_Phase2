@@ -1,7 +1,7 @@
 FROM public.ecr.aws/lambda/python:3.11
 
 # Install git
-RUN dnf update -y && dnf install -y git && dnf clean all
+RUN yum update -y && yum install -y git && yum clean all
 
 # Install dependencies
 COPY requirements.txt ${LAMBDA_TASK_ROOT}
