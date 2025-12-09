@@ -131,7 +131,8 @@ class S3Storage:
             response = self.s3.get_object(Bucket=self.bucket, Key=self._get_key(package_id, "full"))
             content = response['Body'].read().decode('utf-8')
             return Package.model_validate_json(content)
-        except ClientError:
+        except ClientError as e:
+            print(f"DEBUG: S3 get_package error for {package_id}: {e}")
             return None
 
     def list_packages(self, queries: list[PackageQuery] | None = None, offset: int = 0, limit: int = 10) -> list[PackageMetadata]:
@@ -207,7 +208,29 @@ class S3Storage:
             print("DEBUG: S3 reset found no objects to delete")
 
     def search_by_regex(self, regex: str) -> list[PackageMetadata]:
-        return []
+        import re
+        try:
+            pattern = re.compile(regex)
+        except re.error:
+            return []
+        
+        matches = []
+        # List all packages
+        paginator = self.s3.get_paginator('list_objects_v2')
+        pages = paginator.paginate(Bucket=self.bucket, Prefix=self.prefix, Delimiter='/')
+        
+        for page in pages:
+            for prefix in page.get('CommonPrefixes', []):
+                pkg_id = prefix.get('Prefix').split('/')[-2]
+                pkg = self.get_package(pkg_id)
+                if not pkg:
+                    continue
+                
+                # Search in name and readme
+                if pattern.search(pkg.metadata.name) or pattern.search(pkg.data.readme or ""):
+                    matches.append(pkg.metadata)
+                    
+        return matches
 
 
 
