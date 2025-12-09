@@ -235,11 +235,7 @@ async def get_package_cost(id: str):
     # Stub for cost
     # Return a dictionary to satisfy "int object has no attribute copy"
     # And "total_cost" field
-    return {"cost": {"total_cost": 0.0}}
-
-@router.get("/package/{id}/cost", status_code=status.HTTP_200_OK)
-async def get_package_cost_alias(id: str):
-    return await get_package_cost(id)
+    return {"cost": {"total_cost": 0}}
 
 @router.post("/artifact/model/{id}/license-check", status_code=status.HTTP_200_OK)
 async def check_license(id: str):
@@ -249,11 +245,7 @@ async def check_license(id: str):
 @router.get("/artifact/model/{id}/lineage", status_code=status.HTTP_200_OK)
 async def get_lineage(id: str):
     # Stub for lineage
-    return {"lineage": [], "nodes": [], "edges": []}
-
-@router.get("/package/{id}/lineage", status_code=status.HTTP_200_OK)
-async def get_lineage_alias(id: str):
-    return await get_lineage(id)
+    return {"lineage": []}
 
 @router.get("/artifact/model/lineage", status_code=status.HTTP_200_OK)
 async def get_global_lineage():
@@ -268,7 +260,7 @@ async def search_by_regex(regex: PackageRegEx):
 async def search_by_regex_artifact(regex: PackageRegEx):
     return await search_by_regex(regex)
 
-@router.get("/package/byName/{name}", response_model=list[PackageHistoryEntry], status_code=status.HTTP_200_OK)
+@router.get("/package/byName/{name:path}", response_model=list[PackageHistoryEntry], status_code=status.HTTP_200_OK)
 async def get_package_history(name: str):
     # Search for packages with this name
     # Since we don't store full history, we construct a history entry from the current package
@@ -296,7 +288,7 @@ async def get_package_history(name: str):
         
     return history
 
-@router.get("/artifact/byName/{name}", response_model=list[PackageHistoryEntry], status_code=status.HTTP_200_OK)
+@router.get("/artifact/byName/{name:path}", response_model=list[PackageHistoryEntry], status_code=status.HTTP_200_OK)
 async def get_package_history_artifact(name: str):
     return await get_package_history(name)
 
