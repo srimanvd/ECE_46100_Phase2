@@ -168,31 +168,31 @@ async def delete_package_code_plural(id: str):
 
 # --- List Routes for Autograder ---
 
-@router.get("/artifacts/code", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK)
-async def list_packages_code():
-    return storage.list_packages(queries=[PackageQuery(name="*", version=None, types=["code"])])
-
-@router.get("/artifacts/dataset", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK)
-async def list_packages_dataset():
-    return storage.list_packages(queries=[PackageQuery(name="*", version=None, types=["dataset"])])
-
-@router.get("/artifacts/model", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK)
-async def list_packages_model():
-    return storage.list_packages(queries=[PackageQuery(name="*", version=None, types=["model"])])
-
 # --- List Routes for Autograder ---
 
 @router.get("/artifacts/code", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK)
 async def list_packages_code():
     return storage.list_packages(queries=[PackageQuery(name="*", version=None, types=["code"])])
 
+@router.get("/artifacts/code/", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK, include_in_schema=False)
+async def list_packages_code_slash():
+    return await list_packages_code()
+
 @router.get("/artifacts/dataset", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK)
 async def list_packages_dataset():
     return storage.list_packages(queries=[PackageQuery(name="*", version=None, types=["dataset"])])
 
+@router.get("/artifacts/dataset/", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK, include_in_schema=False)
+async def list_packages_dataset_slash():
+    return await list_packages_dataset()
+
 @router.get("/artifacts/model", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK)
 async def list_packages_model():
     return storage.list_packages(queries=[PackageQuery(name="*", version=None, types=["model"])])
+
+@router.get("/artifacts/model/", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK, include_in_schema=False)
+async def list_packages_model_slash():
+    return await list_packages_model()
 
 @router.get("/package/{id}/rate", response_model=PackageRating, status_code=status.HTTP_200_OK)
 async def rate_package(id: str):
