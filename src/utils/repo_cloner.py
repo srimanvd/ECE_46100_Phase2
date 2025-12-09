@@ -46,12 +46,6 @@ def download_repo_zip(repo_url: str) -> str:
              zip_url = f"{url}/archive/HEAD.zip"
             
         logger.info(f"Attempting to download zip from {zip_url}")
-        
-        try:
-            response = requests.get(zip_url, headers=headers, stream=True, timeout=30)
-            if response.status_code == 200:
-                break
-        except Exception:
     try:
         # Normalize URL
         url = repo_url.rstrip("/")
