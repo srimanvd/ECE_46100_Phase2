@@ -50,6 +50,7 @@ def metric(resource: dict) -> tuple[float, int]:
     commits: list[str] = []
 
     repo_path = resource.get("local_path") or resource.get("local_dir")
+    print(f"DEBUG: bus_factor repo_path={repo_path}")
     if repo_path and Repo is not None:
         try:
             repo = Repo(repo_path)
@@ -59,9 +60,14 @@ def metric(resource: dict) -> tuple[float, int]:
                     commits.append(commit.author.email)
                 elif commit.author and commit.author.name:
                     commits.append(commit.author.name)
-        except Exception:
+            print(f"DEBUG: bus_factor found {len(commits)} commits")
+        except Exception as e:
+            print(f"DEBUG: bus_factor error: {e}")
             commits = []
+    else:
+        print(f"DEBUG: bus_factor skipped (path={repo_path}, Repo={Repo})")
 
     score = compute_bus_factor_from_commits(commits)
+    print(f"DEBUG: bus_factor score={score}")
     latency_ms = int((time.perf_counter() - start) * 1000)
     return float(score), latency_ms
