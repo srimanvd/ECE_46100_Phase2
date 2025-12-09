@@ -87,22 +87,28 @@ class S3Storage:
         self.prefix = "packages/"
 
     def _get_key(self, package_id: str, kind: str = "metadata") -> str:
-        # kind: metadata | content
-        ext = "json" if kind == "metadata" else "zip"
+        # kind: metadata | content | full
+        if kind == "content":
+            ext = "zip"
+        elif kind == "full":
+            ext = "json" # Full package JSON
+        else:
+            ext = "json" # Metadata JSON
+            
         return f"{self.prefix}{package_id}/{kind}.{ext}"
 
     def add_package(self, package: Package) -> None:
         print(f"DEBUG: S3 add_package {package.metadata.id}")
-        # Store metadata
-        self.s3.put_object(
-            Bucket=self.bucket,
-            Key=self._get_key(package.metadata.id, "metadata"),
-            Body=package.metadata.model_dump_json()
-        )
-        # Store content if exists
-        if package.data.content:
-            import base64
-            try:
+        try:
+            # Store metadata
+            self.s3.put_object(
+                Bucket=self.bucket,
+                Key=self._get_key(package.metadata.id, "metadata"),
+                Body=package.metadata.model_dump_json()
+            )
+            # Store content if exists
+            if package.data.content:
+                import base64
                 binary_data = base64.b64decode(package.data.content)
                 self.s3.put_object(
                     Bucket=self.bucket,
@@ -115,24 +121,35 @@ class S3Storage:
                     Key=f"{self.prefix}{package.metadata.id}/{package.metadata.id}.zip",
                     Body=binary_data
                 )
-            except Exception as e:
-                print(f"DEBUG: S3 add_package content error: {e}")
-                pass 
-        
-        self.s3.put_object(
-            Bucket=self.bucket,
-            Key=self._get_key(package.metadata.id, "full"),
-            Body=package.model_dump_json()
-        )
+            
+            # Store full package
+            self.s3.put_object(
+                Bucket=self.bucket,
+                Key=self._get_key(package.metadata.id, "full"),
+                Body=package.model_dump_json()
+            )
+        except Exception as e:
+            print(f"DEBUG: S3 add_package error: {e}")
+            raise e
 
     def get_package(self, package_id: str) -> Package | None:
         from botocore.exceptions import ClientError
         try:
-            response = self.s3.get_object(Bucket=self.bucket, Key=self._get_key(package_id, "full"))
+            # Try standard key
+            key = self._get_key(package_id, "full")
+            response = self.s3.get_object(Bucket=self.bucket, Key=key)
             content = response['Body'].read().decode('utf-8')
             return Package.model_validate_json(content)
         except ClientError as e:
-            print(f"DEBUG: S3 get_package error for {package_id}: {e}")
+            print(f"DEBUG: S3 get_package error for {package_id} (key={key}): {e}")
+            # Fallback: try with .zip extension if it was saved that way previously
+            try:
+                fallback_key = f"{self.prefix}{package_id}/full.zip"
+                response = self.s3.get_object(Bucket=self.bucket, Key=fallback_key)
+                content = response['Body'].read().decode('utf-8')
+                return Package.model_validate_json(content)
+            except Exception:
+                pass
             return None
 
     def list_packages(self, queries: list[PackageQuery] | None = None, offset: int = 0, limit: int = 10) -> list[PackageMetadata]:
