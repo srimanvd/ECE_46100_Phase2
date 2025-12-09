@@ -1,46 +1,62 @@
-name: Deploy to AWS Lambda
+name: Deploy to AWS Lambda (Docker)
 
 on:
   push:
     branches:
       - master
+      - main
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
       with:
-        python-version: '3.11'
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
 
-    - name: Install dependencies
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Ensure ECR repository exists
+      shell: bash
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt -t package/
-        cp -r src package/
+        aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" >/dev/null 2>&1 || \
+        aws ecr create-repository --repository-name "$ECR_REPOSITORY" >/dev/null
 
-    - name: Run Tests
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
       run: |
-        pip install -r requirements.txt
-        export PYTHONPATH=$PYTHONPATH:$(pwd)
-        pytest tests/api/test_routes.py
+        # Build the docker image
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        
+        # Push the image to ECR
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-    - name: Zip Package
+    - name: Update Lambda Function
+      env:
+        IMAGE_URI: ${{ steps.build-image.outputs.image }}
       run: |
-        cd package
-        zip -r ../deployment_package.zip .
-        cd ..
-
-    - name: Deploy to Lambda
-      uses: appleboy/lambda-action@v0.1.9
-      with:
-        aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws_region: ${{ secrets.AWS_REGION }}
-        function_name: ${{ secrets.LAMBDA_FUNCTION_NAME }}
-        zip_file: deployment_package.zip
+        # Note: This assumes the Lambda function is already configured to use Container Images.
+        # If it was previously Zip-based, you may need to recreate it or update its configuration manually first.
+        aws lambda update-function-code \
+          --function-name $LAMBDA_FUNCTION_NAME \
+          --image-uri $IMAGE_URI
