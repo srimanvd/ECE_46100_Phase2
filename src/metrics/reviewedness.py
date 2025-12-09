@@ -223,54 +223,6 @@ def compute_reviewedness(
     )
 
 
-def metric(resource: dict) -> tuple[float, int]:
-    """
-    Reviewedness metric using GitHub API.
-    """
-    import time
-    t0 = time.perf_counter()
-    score = 0.0
-    
-    # 0) Try GitHub API first
-    url = resource.get("url", "")
-    if "github.com" in url:
-        try:
-            parts = url.rstrip("/").split("/")
-            if len(parts) >= 2:
-                owner, repo = parts[-2], parts[-1]
-                from src.utils.github_api import GitHubAPI
-                api = GitHubAPI()
-                
-                commits = api.get_commits(owner, repo)
-                if commits:
-                    reviewed_count = 0
-                    total_count = len(commits)
-                    
-                    for c in commits:
-                        msg = c.get("commit", {}).get("message", "")
-                        if "Merge pull request" in msg or "Reviewed-by:" in msg or "Pull Request #" in msg:
-                            reviewed_count += 1
-                    
-                    if total_count > 0:
-                        score = reviewed_count / total_count
-                        latency_ms = int((time.perf_counter() - t0) * 1000)
-                        return float(score), latency_ms
-        except Exception:
-            pass
-
-    # 1) Local git analysis
-    local_path = resource.get("local_path") or resource.get("local_dir")
-    if local_path:
-        try:
-            res = compute_reviewedness(local_path)
-            score = max(0.0, res.score) if res.score != -1.0 else 0.0
-        except Exception:
-            pass
-
-    latency_ms = int((time.perf_counter() - t0) * 1000)
-    return float(score), latency_ms
-
-
 if __name__ == "__main__":
     import argparse
 

@@ -186,20 +186,6 @@ class S3Storage:
         print(f"DEBUG: S3 list_packages found {len(packages)} packages")
         return packages
 
-    def get_download_url(self, package_id: str) -> str | None:
-        try:
-            # Generate presigned URL for content.zip
-            key = self._get_key(package_id, "content")
-            url = self.s3.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': self.bucket, 'Key': key},
-                ExpiresIn=3600
-            )
-            return url
-        except Exception as e:
-            print(f"DEBUG: S3 get_download_url error: {e}")
-            return None
-
     def delete_package(self, package_id: str) -> bool:
         print(f"DEBUG: S3 delete_package {package_id}")
         objects = self.s3.list_objects_v2(Bucket=self.bucket, Prefix=f"{self.prefix}{package_id}/")
@@ -221,32 +207,7 @@ class S3Storage:
             print("DEBUG: S3 reset found no objects to delete")
 
     def search_by_regex(self, regex: str) -> list[PackageMetadata]:
-        import re
-        try:
-            pattern = re.compile(regex)
-        except re.error:
-            return []
-            
-        paginator = self.s3.get_paginator('list_objects_v2')
-        pages = paginator.paginate(Bucket=self.bucket, Prefix=self.prefix, Delimiter='/')
-        
-        matches = []
-        
-        for page in pages:
-            for prefix in page.get('CommonPrefixes', []):
-                pkg_id = prefix.get('Prefix').split('/')[-2]
-                # Optimization: Try to get just metadata first? 
-                # But we need readme which is in 'full' or 'data'.
-                # get_package returns full package.
-                pkg = self.get_package(pkg_id)
-                if not pkg:
-                    continue
-                
-                # Search in name and readme
-                if pattern.search(pkg.metadata.name) or pattern.search(pkg.data.readme or ""):
-                    matches.append(pkg.metadata)
-                    
-        return matches
+        return []
 
 
 

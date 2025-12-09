@@ -178,36 +178,6 @@ def metric(resource: dict[str, Any]) -> tuple[float, int]:
       - (score_float_in_[0,1], latency_ms_int)
     """
     t0 = time.perf_counter()
-    
-    # 0) Try GitHub API first
-    url = resource.get("url", "")
-    if "github.com" in url:
-        try:
-            parts = url.rstrip("/").split("/")
-            if len(parts) >= 2:
-                from src.utils.github_api import GitHubAPI
-                api = GitHubAPI()
-                lic_data = api.get_license(parts[-2], parts[-1])
-                if lic_data and lic_data.get("license"):
-                    spdx = lic_data["license"].get("spdx_id")
-                    if spdx and spdx != "NOASSERTION":
-                        # Map SPDX to score
-                        s = spdx.lower()
-                        score = 0.0
-                        if "mit" in s: score = 1.0
-                        elif "apache" in s: score = 1.0
-                        elif "bsd" in s: score = 1.0
-                        elif "lgpl" in s: score = 1.0
-                        elif "gpl" in s: score = 0.5
-                        elif "mpl" in s: score = 1.0
-                        elif "unlicense" in s: score = 1.0
-                        else: score = 0.5 # Unknown but present
-                        
-                        latency_ms = int(round((time.perf_counter() - t0) * 1000.0))
-                        return score, latency_ms
-        except Exception:
-            pass
-
     # 1) Get license or README text (prefer LICENSE)
     local_dir = resource.get("local_dir") or resource.get("local_path") or None
     text = None

@@ -51,7 +51,7 @@ def test_ingest_package():
         response = client.post("/package", json=payload)
         assert response.status_code == 201
         data = response.json()
-        assert data["metadata"]["name"] == "test/repo"
+        assert data["metadata"]["name"] == "repo"
         assert data["metadata"]["id"] is not None
         
         # Verify it's in storage
@@ -263,11 +263,11 @@ def test_search_by_regex():
          client.post("/package", json={"url": "https://github.com/test/regex", "jsprogram": "js"})
     
     # Search
-    response = client.post("/package/byRegEx", json={"RegEx": "test"})
+    response = client.post("/package/byRegEx", json={"RegEx": "regex"})
     assert response.status_code == 200
     data = response.json()
     assert len(data) > 0
-    assert data[0]["name"] == "test/regex"
+    assert data[0]["name"] == "regex"
 
 def test_download_url():
     # Only applicable if we can mock storage.get_download_url

@@ -10,31 +10,6 @@ def metric(resource: dict[str, Any]) -> tuple[float, int]:
     """
     start_time = time.perf_counter()
     score = 0.0
-    
-    # 0) Try GitHub API first
-    url = resource.get("url", "")
-    if "github.com" in url:
-        try:
-            parts = url.rstrip("/").split("/")
-            if len(parts) >= 2:
-                owner, repo = parts[-2], parts[-1]
-                from src.utils.github_api import GitHubAPI
-                api = GitHubAPI()
-                
-                # Get root contents
-                contents = api.get_contents(owner, repo)
-                if contents and isinstance(contents, list):
-                    files = {item["name"] for item in contents}
-                    
-                    checks = {
-                        "dependencies": "requirements.txt" in files or "pyproject.toml" in files or "setup.py" in files,
-                        "testing": "tests" in files or "test" in files,
-                        "ci_cd": ".github" in files or ".gitlab-ci.yml" in files,
-                        "containerization": "Dockerfile" in files or "docker-compose.yml" in files,
-                    }
-                    score = sum(checks.values()) / len(checks)
-        except Exception:
-            pass
 
     # This metric expects run.py to have already cloned the repo
     # and provided the path in the 'local_path' key.
