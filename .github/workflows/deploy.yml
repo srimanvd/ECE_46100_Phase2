@@ -61,7 +61,7 @@ jobs:
         # Step 1: Update environment variables (static, don't change on each deploy)
         aws lambda update-function-configuration \
           --function-name $LAMBDA_FUNCTION_NAME \
-          --environment "Variables={PYTHONDONTWRITEBYTECODE=1}" \
+          --environment "Variables={PYTHONDONTWRITEBYTECODE=1,STORAGE_TYPE=S3,BUCKET_NAME=ece46100-registry-bucket}" \
           --timeout 30 \
           --memory-size 256
         
