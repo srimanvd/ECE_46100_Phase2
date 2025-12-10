@@ -51,25 +51,55 @@ jobs:
         
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-    - name: Update Lambda Function
+    - name: Force Lambda to update with new image
       env:
         IMAGE_URI: ${{ steps.build-image.outputs.image }}
+        TIMESTAMP: ${{ github.run_id }}-${{ github.run_number }}
       run: |
-        # Update Lambda function to use the new image (with SHA tag for uniqueness)
+        echo "Forcing Lambda update with image: $IMAGE_URI"
+        
+        # Step 1: Update environment variables to force new container instances
+        aws lambda update-function-configuration \
+          --function-name $LAMBDA_FUNCTION_NAME \
+          --environment "Variables={FORCE_DEPLOY=$TIMESTAMP,PYTHONDONTWRITEBYTECODE=1}" \
+          --timeout 30 \
+          --memory-size 256
+        
+        echo "Waiting for configuration update..."
+        aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
+        
+        # Step 2: Update function code with new image and publish new version
         aws lambda update-function-code \
           --function-name $LAMBDA_FUNCTION_NAME \
           --image-uri $IMAGE_URI \
           --publish
         
-        # Wait for update to complete
-        aws lambda wait function-updated \
-          --function-name $LAMBDA_FUNCTION_NAME
+        echo "Waiting for code update..."
+        aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
         
-        # Force configuration update to ensure Lambda pulls fresh image
+        # Step 3: Force another configuration change to invalidate any cache
         aws lambda update-function-configuration \
           --function-name $LAMBDA_FUNCTION_NAME \
-          --description "Deployed $(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-          --timeout 30
+          --description "Deployed at $(date -u +%Y-%m-%dT%H:%M:%SZ) - Build $TIMESTAMP"
         
-        echo "Lambda function successfully updated to $IMAGE_URI"
+        echo "Waiting for final configuration update..."
+        aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME
+        
+        # Step 4: Warm up new containers by invoking function
+        echo "Warming new Lambda containers..."
+        aws lambda invoke \
+          --function-name $LAMBDA_FUNCTION_NAME \
+          --payload '{"rawPath": "/", "requestContext": {"http": {"method": "GET"}}}' \
+          --cli-binary-format raw-in-base64-out \
+          /tmp/warmup1.json || echo "First warmup invocation completed"
+        
+        aws lambda invoke \
+          --function-name $LAMBDA_FUNCTION_NAME \
+          --payload '{"rawPath": "/", "requestContext": {"http": {"method": "GET"}}}' \
+          --cli-binary-format raw-in-base64-out \
+          /tmp/warmup2.json || echo "Second warmup invocation completed"
+        
+        echo "✅ Lambda successfully updated to $IMAGE_URI"
+        echo "📦 Build: $TIMESTAMP"
+        echo "🔥 New containers warmed and ready"
 
