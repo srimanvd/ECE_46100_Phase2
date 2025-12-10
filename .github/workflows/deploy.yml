@@ -55,8 +55,21 @@ jobs:
       env:
         IMAGE_URI: ${{ steps.build-image.outputs.image }}
       run: |
-        # Note: This assumes the Lambda function is already configured to use Container Images.
-        # If it was previously Zip-based, you may need to recreate it or update its configuration manually first.
+        # Update Lambda function to use the new image (with SHA tag for uniqueness)
         aws lambda update-function-code \
           --function-name $LAMBDA_FUNCTION_NAME \
-          --image-uri $IMAGE_URI
+          --image-uri $IMAGE_URI \
+          --publish
+        
+        # Wait for update to complete
+        aws lambda wait function-updated \
+          --function-name $LAMBDA_FUNCTION_NAME
+        
+        # Force configuration update to ensure Lambda pulls fresh image
+        aws lambda update-function-configuration \
+          --function-name $LAMBDA_FUNCTION_NAME \
+          --description "Deployed $(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+          --timeout 30
+        
+        echo "Lambda function successfully updated to $IMAGE_URI"
+

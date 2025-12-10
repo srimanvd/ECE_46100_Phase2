@@ -97,7 +97,7 @@ async def upload_package(package: PackageData, x_authorization: str | None = Hea
     if package.url and not package.content:
         # Ingest - Only rate MODELS, not code/datasets
         if package_type == "model":
-            rating = compute_package_rating(package.url, package_type)
+            rating = compute_package_rating(package.url)
             if rating.net_score < 0.25:
                 raise HTTPException(status_code=424, detail="Model score too low for ingestion")
         
