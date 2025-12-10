@@ -220,10 +220,10 @@ def compute_package_rating(url: str) -> PackageRating:
         dataset_quality=get_res("dataset_quality")[0],
         dataset_quality_latency=get_res("dataset_quality")[1],
         size_score=SizeScore(
-            raspberry_pi=get_res("size")[0],
-            jetson_nano=get_res("size")[0],
-            desktop_pc=get_res("size")[0],
-            aws_server=get_res("size")[0]
+            raspberry_pi=get_res("size")[0].get("raspberry_pi", 0.0) if isinstance(get_res("size")[0], dict) else 0.0,
+            jetson_nano=get_res("size")[0].get("jetson_nano", 0.0) if isinstance(get_res("size")[0], dict) else 0.0,
+            desktop_pc=get_res("size")[0].get("desktop_pc", 0.0) if isinstance(get_res("size")[0], dict) else 0.0,
+            aws_server=get_res("size")[0].get("aws_server", 0.0) if isinstance(get_res("size")[0], dict) else 0.0
         ),
         size_score_latency=get_res("size")[1]
     )
