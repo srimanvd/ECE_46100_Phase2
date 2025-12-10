@@ -61,7 +61,7 @@ jobs:
         # Step 1: Update environment variables to force new container instances
         aws lambda update-function-configuration \
           --function-name $LAMBDA_FUNCTION_NAME \
-          --environment "Variables={FORCE_DEPLOY=$TIMESTAMP,PYTHONDONTWRITEBYTECODE=1}" \
+          --environment "Variables={FORCE_DEPLOY=$TIMESTAMP,PYTHONDONTWRITEBYTECODE=1,STORAGE_TYPE=S3,AWS_REGION=us-east-2,BUCKET_NAME=ece46100-registry}" \
           --timeout 30 \
           --memory-size 256
         
