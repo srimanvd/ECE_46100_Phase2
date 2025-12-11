@@ -30,7 +30,7 @@ def metric(resource: dict[str, Any]) -> tuple[dict[str, float], int]:
         "aws_server": 0.0
     }
     
-    category = resource.get("category", "")
+    category = resource.get("category", "").upper()
     if category != "MODEL":
         latency_ms = int((time.perf_counter() - start) * 1000)
         return default_scores, latency_ms
