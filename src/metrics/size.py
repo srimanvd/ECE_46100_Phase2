@@ -1,18 +1,25 @@
-"""Size metric - estimates model deployability on different hardware."""
 from __future__ import annotations
 
 import time
 from typing import Any
 
+from huggingface_hub import model_info
+from huggingface_hub.utils import HfHubHTTPError
+
+
+def normalize(value: float, min_val: float, max_val: float) -> float:
+    """Linearly scale size into [0,1], clamped."""
+    if value <= min_val:
+        return 1.0
+    elif value >= max_val:
+        return 0.0
+    return 1 - ((value - min_val) / (max_val - min_val))
+
 
 def metric(resource: dict[str, Any]) -> tuple[dict[str, float], int]:
     """
     Model size metric - returns scores for different hardware types.
-    Uses heuristics based on model name since HF API is unreliable in Lambda.
-    
     Returns (dict with 4 hardware scores, latency_ms)
-    
-    Force deployment: 2025-12-10
     """
     start = time.perf_counter()
     
@@ -28,58 +35,50 @@ def metric(resource: dict[str, Any]) -> tuple[dict[str, float], int]:
         latency_ms = int((time.perf_counter() - start) * 1000)
         return default_scores, latency_ms
     
-    # Get model name for heuristic sizing
-    name = resource.get("name", "").lower()
-    url = resource.get("url", "").lower()
+    url = resource.get("url", "")
+    if "huggingface.co" not in url:
+        latency_ms = int((time.perf_counter() - start) * 1000)
+        return default_scores, latency_ms
     
-    # Size heuristics based on common model name patterns
-    # Larger models get lower scores for smaller hardware
+    model_id = resource.get("name", "")
+    if not model_id:
+        try:
+            model_id = url.split("huggingface.co/")[-1].strip("/")
+        except:
+            pass
     
-    # Tiny models (<100MB) - great on all hardware
-    tiny_patterns = ["tiny", "mini", "small", "distil", "mobile", "lite"]
-    # Base models (~500MB-1GB) - moderate
-    base_patterns = ["base", "small"]
-    # Large models (1-5GB) - needs good hardware
-    large_patterns = ["large", "xl", "xxl", "7b", "13b"]
-    # Huge models (>10GB) - server only  
-    huge_patterns = ["70b", "175b", "llama-2-70", "falcon-40", "gpt-j", "gpt-neo"]
+    if not model_id:
+        latency_ms = int((time.perf_counter() - start) * 1000)
+        return default_scores, latency_ms
     
-    # Determine size category
-    combined = name + " " + url
-    
-    if any(p in combined for p in huge_patterns):
-        # Huge model - only works on servers
+    try:
+        info = model_info(model_id)
+        
+        size_bytes = 0
+        if hasattr(info, 'safetensors') and info.safetensors:
+            if hasattr(info.safetensors, 'total'):
+                size_bytes = info.safetensors.total
+        elif hasattr(info, 'siblings') and info.siblings:
+            for sibling in info.siblings:
+                if hasattr(sibling, 'size') and sibling.size:
+                    size_bytes += sibling.size
+        
+        if size_bytes == 0:
+            latency_ms = int((time.perf_counter() - start) * 1000)
+            return default_scores, latency_ms
+        
+        size_gb = size_bytes / (1024 ** 3)
+        
         scores = {
-            "raspberry_pi": 0.0,
-            "jetson_nano": 0.0,
-            "desktop_pc": 0.2,
-            "aws_server": 0.5,
+            "raspberry_pi": normalize(size_gb, 0.0, 1.0),
+            "jetson_nano": normalize(size_gb, 0.0, 2.0),
+            "desktop_pc": normalize(size_gb, 0.0, 6.0),
+            "aws_server": normalize(size_gb, 0.0, 10.0),
         }
-    elif any(p in combined for p in large_patterns):
-        # Large model
-        scores = {
-            "raspberry_pi": 0.0,
-            "jetson_nano": 0.1,
-            "desktop_pc": 0.5,
-            "aws_server": 0.8,
-        }
-    elif any(p in combined for p in tiny_patterns):
-        # Tiny model - works everywhere
-        scores = {
-            "raspberry_pi": 0.8,
-            "jetson_nano": 0.9,
-            "desktop_pc": 1.0,
-            "aws_server": 1.0,
-        }
-    else:
-        # Default: assume base/medium sized model (~500MB-1GB)
-        # This covers bert-base, gpt2, etc.
-        scores = {
-            "raspberry_pi": 0.1,
-            "jetson_nano": 0.4,
-            "desktop_pc": 0.8,
-            "aws_server": 0.9,
-        }
-    
-    latency_ms = int((time.perf_counter() - start) * 1000)
-    return scores, latency_ms
+        
+        latency_ms = int((time.perf_counter() - start) * 1000)
+        return scores, latency_ms
+        
+    except (HfHubHTTPError, Exception):
+        latency_ms = int((time.perf_counter() - start) * 1000)
+        return default_scores, latency_ms
