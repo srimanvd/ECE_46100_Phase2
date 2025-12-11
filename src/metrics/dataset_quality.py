@@ -67,7 +67,8 @@ def metric(resource: dict[str, Any]) -> tuple[float, int]:
     start_time = time.perf_counter()
     score = 0.0
 
-    category = resource.get("category", "")
+    category = resource.get("category", "").upper()
+    print(f"DEBUG dataset_quality: category={category}")
     
     # Only CODE artifacts get 0 (they don't reference datasets)
     if category == "CODE":
@@ -75,7 +76,12 @@ def metric(resource: dict[str, Any]) -> tuple[float, int]:
         return 0.0, latency_ms
 
     # For MODELS and DATASETS: search for dataset references
-    datasets, _ = find_datasets_from_resource(resource)
+    try:
+        datasets, _ = find_datasets_from_resource(resource)
+        print(f"DEBUG dataset_quality: found {len(datasets)} datasets")
+    except Exception as e:
+        print(f"DEBUG dataset_quality: find_datasets failed: {e}")
+        datasets = []
 
     if datasets:
         # Score all found datasets and take the max (best-case quality)
@@ -83,6 +89,7 @@ def metric(resource: dict[str, Any]) -> tuple[float, int]:
         scores = [_score_dataset(ds_id) for ds_id in dataset_ids if ds_id]
         if scores:
             score = max(scores)
+            print(f"DEBUG dataset_quality: max score={score}")
 
     latency_ms = int((time.perf_counter() - start_time) * 1000)
     return score, latency_ms
