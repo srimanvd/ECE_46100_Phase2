@@ -103,10 +103,11 @@ def compute_package_rating(url: str) -> PackageRating:
     
     for name, metric_func in metrics.items():
         try:
-            with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
-                score, latency = metric_func(resource)
+            # Don't suppress stdout so we can see debug logging
+            score, latency = metric_func(resource)
             results[name] = (float(score), float(latency))
-        except Exception:
+        except Exception as e:
+            print(f"DEBUG: Metric '{name}' failed with exception: {e}")
             results[name] = (0.0, 0.0)
 
     # Cleanup
