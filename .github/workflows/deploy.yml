@@ -62,8 +62,8 @@ jobs:
         aws lambda update-function-configuration \
           --function-name $LAMBDA_FUNCTION_NAME \
           --environment "Variables={PYTHONDONTWRITEBYTECODE=1,STORAGE_TYPE=S3,BUCKET_NAME=ece46100-registry-bucket}" \
-          --timeout 30 \
-          --memory-size 256
+          --timeout 60 \
+          --memory-size 512
         
         echo "Waiting for configuration update..."
         aws lambda wait function-updated --function-name $LAMBDA_FUNCTION_NAME

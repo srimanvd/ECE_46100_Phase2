@@ -79,22 +79,27 @@ def compute_package_rating(url: str) -> PackageRating:
     repo_to_clone = None
     if "github.com" in url:
         repo_to_clone = url
+        print(f"DEBUG: Direct GitHub URL: {repo_to_clone}")
     elif "huggingface.co" in url:
         try:
-            with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
-                repo_to_clone = find_github_url_from_hf(resource["name"])
-        except Exception:
-            pass
+            print(f"DEBUG: Finding GitHub URL from HuggingFace model: {resource['name']}")
+            repo_to_clone = find_github_url_from_hf(resource["name"])
+            print(f"DEBUG: Found GitHub URL: {repo_to_clone}")
+        except Exception as e:
+            print(f"DEBUG: Failed to find GitHub URL: {e}")
 
     cloned_path = None
     if repo_to_clone:
         try:
-            with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
-                cloned_path = clone_repo_to_temp(repo_to_clone)
+            print(f"DEBUG: Cloning repo: {repo_to_clone}")
+            cloned_path = clone_repo_to_temp(repo_to_clone)
             resource["local_path"] = cloned_path
+            print(f"DEBUG: Cloned to: {cloned_path}")
         except Exception as e:
             print(f"DEBUG: Cloning failed: {e}")
             cloned_path = None
+    else:
+        print(f"DEBUG: No repo to clone, skipping")
 
     # Don't fail if cloning didn't work - many metrics work without local_path
     # (HuggingFace models use API, not git cloning)
