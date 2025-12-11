@@ -315,8 +315,8 @@ async def get_lineage(id: str):
     nodes = []
     edges = []
     
-    # Add the model itself as a node
-    model_name = pkg.get("metadata", {}).get("name", id)
+    # Add the model itself as a node - use Pydantic attributes
+    model_name = pkg.metadata.name if pkg.metadata else id
     nodes.append({
         "id": id,
         "type": "model",
@@ -328,9 +328,9 @@ async def get_lineage(id: str):
     
     # Add related packages as nodes and create edges
     for other_pkg in all_packages:
-        other_id = other_pkg.get("metadata", {}).get("id", "")
-        other_type = other_pkg.get("metadata", {}).get("type", "code")
-        other_name = other_pkg.get("metadata", {}).get("name", "")
+        other_id = other_pkg.metadata.id if other_pkg.metadata else ""
+        other_type = other_pkg.metadata.type if other_pkg.metadata else "code"
+        other_name = other_pkg.metadata.name if other_pkg.metadata else ""
         
         if other_id != id:
             nodes.append({
@@ -362,9 +362,9 @@ async def get_global_lineage():
     code_pkgs = []
     
     for pkg in all_packages:
-        pkg_id = pkg.get("metadata", {}).get("id", "")
-        pkg_type = pkg.get("metadata", {}).get("type", "code")
-        pkg_name = pkg.get("metadata", {}).get("name", "")
+        pkg_id = pkg.metadata.id if pkg.metadata else ""
+        pkg_type = pkg.metadata.type if pkg.metadata else "code"
+        pkg_name = pkg.metadata.name if pkg.metadata else ""
         
         node = {"id": pkg_id, "type": pkg_type, "name": pkg_name}
         nodes.append(node)
