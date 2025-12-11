@@ -161,10 +161,20 @@ def compute_package_rating(url: str) -> PackageRating:
         net_score_val, net_score_lat = results["net_score"]
     else:
         # Simple average as fallback
-        vals = [v[0] for k,v in results.items() if k != "net_score"]
+        vals = []
+        for k, v in results.items():
+            if k == "net_score":
+                continue
+            if k == "size" and isinstance(v[0], dict):
+                # Average the 4 size scores into one value
+                size_vals = list(v[0].values())
+                if size_vals:
+                    vals.append(sum(size_vals) / len(size_vals))
+            elif isinstance(v[0], (int, float)):
+                vals.append(v[0])
         if vals:
             net_score_val = sum(vals)/len(vals)
-        net_score_lat = sum([v[1] for k,v in results.items()])
+        net_score_lat = sum([v[1] for k,v in results.items() if isinstance(v[1], (int, float))])
 
     # --- Explicitly run new metrics that have different signatures ---
     import time
