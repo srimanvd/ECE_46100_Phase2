@@ -105,10 +105,17 @@ def compute_package_rating(url: str) -> PackageRating:
         try:
             # Don't suppress stdout so we can see debug logging
             score, latency = metric_func(resource)
-            results[name] = (float(score), float(latency))
+            # Size metric returns a dict, not a float - handle specially
+            if name == "size" and isinstance(score, dict):
+                results[name] = (score, float(latency))
+            else:
+                results[name] = (float(score), float(latency))
         except Exception as e:
             print(f"DEBUG: Metric '{name}' failed with exception: {e}")
-            results[name] = (0.0, 0.0)
+            if name == "size":
+                results[name] = ({"raspberry_pi": 0.0, "jetson_nano": 0.0, "desktop_pc": 0.0, "aws_server": 0.0}, 0.0)
+            else:
+                results[name] = (0.0, 0.0)
 
     # Cleanup
     if cloned_path:
