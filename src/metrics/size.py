@@ -20,6 +20,8 @@ def metric(resource: dict[str, Any]) -> tuple[dict[str, float], int]:
     """
     Model size metric - returns scores for different hardware types.
     Returns (dict with 4 hardware scores, latency_ms)
+    
+    Force deployment: 2025-12-10
     """
     start = time.perf_counter()
     
