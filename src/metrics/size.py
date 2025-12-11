@@ -16,21 +16,10 @@ def normalize(value: float, min_val: float, max_val: float) -> float:
     return 1 - ((value - min_val) / (max_val - min_val))
 
 
-# Fallback scores for models where we can't determine size
-# Assumes a mid-sized model (~500MB-1GB) - reasonable default
-FALLBACK_SCORES = {
-    "raspberry_pi": 0.5,
-    "jetson_nano": 0.7,
-    "desktop_pc": 0.9,
-    "aws_server": 0.95,
-}
-
-
 def metric(resource: dict[str, Any]) -> tuple[dict[str, float], int]:
     """
     Model size metric - returns scores for different hardware types.
     Uses HuggingFace API to get actual model size.
-    Falls back to reasonable defaults when size can't be determined.
     Returns (dict with 4 hardware scores, latency_ms)
     """
     start = time.perf_counter()
@@ -48,28 +37,27 @@ def metric(resource: dict[str, Any]) -> tuple[dict[str, float], int]:
         return default_scores, latency_ms
     
     url = resource.get("url", "")
-    name = resource.get("name", "")
+    print(f"DEBUG SIZE: url='{url}', name='{resource.get('name', '')}'")
     
-    # Try to extract model_id from URL
+    # Only use URL to get model_id - NEVER use name field
     model_id = None
     if "huggingface.co" in url:
         try:
             # Extract from URL like https://huggingface.co/org/model
             model_id = url.split("huggingface.co/")[-1].strip("/")
+            print(f"DEBUG SIZE: extracted model_id='{model_id}' from URL")
         except:
             pass
     
-    # If no model_id from URL, use name directly
-    if not model_id and name:
-        model_id = name
-    
     if not model_id:
-        # Can't determine model, use fallback
+        # No valid HuggingFace URL - return zeros
+        print(f"DEBUG SIZE: No HuggingFace URL found, returning zeros")
         latency_ms = int((time.perf_counter() - start) * 1000)
-        return FALLBACK_SCORES, latency_ms
+        return default_scores, latency_ms
     
     try:
         info = model_info(model_id)
+        print(f"DEBUG SIZE: HuggingFace API call successful for '{model_id}'")
         
         size_bytes = 0
         if hasattr(info, 'safetensors') and info.safetensors:
@@ -80,10 +68,13 @@ def metric(resource: dict[str, Any]) -> tuple[dict[str, float], int]:
                 if hasattr(sibling, 'size') and sibling.size:
                     size_bytes += sibling.size
         
+        print(f"DEBUG SIZE: size_bytes={size_bytes}")
+        
         if size_bytes == 0:
-            # Model found but no size info - use fallback
+            # Model found but no size info
+            print(f"DEBUG SIZE: Model found but no size info, returning zeros")
             latency_ms = int((time.perf_counter() - start) * 1000)
-            return FALLBACK_SCORES, latency_ms
+            return default_scores, latency_ms
         
         size_gb = size_bytes / (1024 ** 3)
         
@@ -94,10 +85,11 @@ def metric(resource: dict[str, Any]) -> tuple[dict[str, float], int]:
             "aws_server": normalize(size_gb, 0.0, 10.0),
         }
         
+        print(f"DEBUG SIZE: Returning scores={scores}")
         latency_ms = int((time.perf_counter() - start) * 1000)
         return scores, latency_ms
         
-    except (HfHubHTTPError, Exception):
-        # Model not found on HuggingFace, use fallback scores
+    except (HfHubHTTPError, Exception) as e:
+        print(f"DEBUG SIZE: HuggingFace API failed for '{model_id}': {e}")
         latency_ms = int((time.perf_counter() - start) * 1000)
-        return FALLBACK_SCORES, latency_ms
+        return default_scores, latency_ms
