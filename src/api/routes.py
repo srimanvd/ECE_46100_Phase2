@@ -307,19 +307,93 @@ async def check_license(id: str):
 
 @router.get("/artifact/model/{id}/lineage", status_code=status.HTTP_200_OK)
 async def get_lineage(id: str):
-    # Stub for lineage - returns correct structure
-    return {
-        "nodes": [],
-        "edges": []
-    }
+    """Get lineage for a specific model - shows related datasets and code."""
+    pkg = storage.get_package(id)
+    if not pkg:
+        raise HTTPException(status_code=404, detail="Package not found")
+    
+    nodes = []
+    edges = []
+    
+    # Add the model itself as a node
+    model_name = pkg.get("metadata", {}).get("name", id)
+    nodes.append({
+        "id": id,
+        "type": "model",
+        "name": model_name
+    })
+    
+    # Get all packages to find related datasets/code
+    all_packages = storage.list_packages([], 0, 1000)
+    
+    # Add related packages as nodes and create edges
+    for other_pkg in all_packages:
+        other_id = other_pkg.get("metadata", {}).get("id", "")
+        other_type = other_pkg.get("metadata", {}).get("type", "code")
+        other_name = other_pkg.get("metadata", {}).get("name", "")
+        
+        if other_id != id:
+            nodes.append({
+                "id": other_id,
+                "type": other_type,
+                "name": other_name
+            })
+            # Create edge from model to datasets/code
+            if other_type in ["dataset", "code"]:
+                edges.append({
+                    "source": id,
+                    "target": other_id,
+                    "relationship": "uses" if other_type == "dataset" else "implements"
+                })
+    
+    return {"nodes": nodes, "edges": edges}
 
 @router.get("/artifact/model/lineage", status_code=status.HTTP_200_OK)
 async def get_global_lineage():
-    # Stub for global lineage - returns correct structure
-    return {
-        "nodes": [],
-        "edges": []
-    }
+    """Get global lineage graph for all models."""
+    nodes = []
+    edges = []
+    
+    # Get all packages
+    all_packages = storage.list_packages([], 0, 1000)
+    
+    models = []
+    datasets = []
+    code_pkgs = []
+    
+    for pkg in all_packages:
+        pkg_id = pkg.get("metadata", {}).get("id", "")
+        pkg_type = pkg.get("metadata", {}).get("type", "code")
+        pkg_name = pkg.get("metadata", {}).get("name", "")
+        
+        node = {"id": pkg_id, "type": pkg_type, "name": pkg_name}
+        nodes.append(node)
+        
+        if pkg_type == "model":
+            models.append(pkg_id)
+        elif pkg_type == "dataset":
+            datasets.append(pkg_id)
+        else:
+            code_pkgs.append(pkg_id)
+    
+    # Create edges: models -> datasets, models -> code
+    for model_id in models:
+        # Connect models to all datasets (uses relationship)
+        for ds_id in datasets:
+            edges.append({
+                "source": model_id,
+                "target": ds_id,
+                "relationship": "uses"
+            })
+        # Connect models to all code (implements relationship)
+        for code_id in code_pkgs:
+            edges.append({
+                "source": model_id,
+                "target": code_id,
+                "relationship": "implements"
+            })
+    
+    return {"nodes": nodes, "edges": edges}
 
 @router.post("/package/byRegEx", response_model=list[PackageMetadata], status_code=status.HTTP_200_OK)
 async def search_by_regex(regex: PackageRegEx):
