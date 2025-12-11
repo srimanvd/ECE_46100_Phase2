@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import requests
 from typing import Any
 
 from huggingface_hub import model_info
@@ -16,10 +17,46 @@ def normalize(value: float, min_val: float, max_val: float) -> float:
     return 1 - ((value - min_val) / (max_val - min_val))
 
 
+def get_model_size_via_http(model_id: str, siblings: list) -> int:
+    """
+    Fallback: Get model file sizes via HTTP HEAD requests.
+    This works even when HuggingFace API doesn't expose file sizes.
+    """
+    total_size = 0
+    
+    # Common model file patterns
+    model_files = []
+    for sibling in siblings:
+        filename = getattr(sibling, 'rfilename', '')
+        if any(ext in filename for ext in ['.bin', '.safetensors', '.onnx', '.pt', '.pth']):
+            model_files.append(filename)
+    
+    # If no model files found, try common names
+    if not model_files:
+        model_files = ['pytorch_model.bin', 'model.safetensors', 'tf_model.h5']
+    
+    for filename in model_files[:3]:  # Limit to 3 requests
+        try:
+            url = f"https://huggingface.co/{model_id}/resolve/main/{filename}"
+            resp = requests.head(url, allow_redirects=True, timeout=5)
+            if resp.status_code == 200:
+                content_length = resp.headers.get('Content-Length')
+                if content_length:
+                    size = int(content_length)
+                    print(f"DEBUG SIZE: Got {filename} size={size} via HTTP HEAD")
+                    total_size += size
+        except Exception as e:
+            print(f"DEBUG SIZE: HTTP HEAD failed for {filename}: {e}")
+            continue
+    
+    return total_size
+
+
 def metric(resource: dict[str, Any]) -> tuple[dict[str, float], int]:
     """
     Model size metric - returns scores for different hardware types.
     Uses HuggingFace API to get actual model size.
+    Falls back to HTTP HEAD requests if API doesn't have size info.
     Returns (dict with 4 hardware scores, latency_ms)
     """
     start = time.perf_counter()
@@ -60,18 +97,30 @@ def metric(resource: dict[str, Any]) -> tuple[dict[str, float], int]:
         print(f"DEBUG SIZE: HuggingFace API call successful for '{model_id}'")
         
         size_bytes = 0
+        
+        # Method 1: Try safetensors info
         if hasattr(info, 'safetensors') and info.safetensors:
             if hasattr(info.safetensors, 'total'):
                 size_bytes = info.safetensors.total
-        elif hasattr(info, 'siblings') and info.siblings:
+                print(f"DEBUG SIZE: Got size from safetensors: {size_bytes}")
+        
+        # Method 2: Try siblings with size
+        if size_bytes == 0 and hasattr(info, 'siblings') and info.siblings:
             for sibling in info.siblings:
                 if hasattr(sibling, 'size') and sibling.size:
                     size_bytes += sibling.size
+            if size_bytes > 0:
+                print(f"DEBUG SIZE: Got size from siblings: {size_bytes}")
         
-        print(f"DEBUG SIZE: size_bytes={size_bytes}")
+        # Method 3: Fallback to HTTP HEAD requests
+        if size_bytes == 0 and hasattr(info, 'siblings') and info.siblings:
+            print(f"DEBUG SIZE: Trying HTTP HEAD fallback")
+            size_bytes = get_model_size_via_http(model_id, info.siblings)
+        
+        print(f"DEBUG SIZE: final size_bytes={size_bytes}")
         
         if size_bytes == 0:
-            # Model found but no size info
+            # Model found but no size info even after fallback
             print(f"DEBUG SIZE: Model found but no size info, returning zeros")
             latency_ms = int((time.perf_counter() - start) * 1000)
             return default_scores, latency_ms
