@@ -8,6 +8,14 @@ from src.utils.dataset_link_finder import find_datasets_from_resource
 
 logger = logging.getLogger("phase1_cli")
 
+# Well-known datasets that are commonly used for training
+WELL_KNOWN_DATASETS = [
+    "glue", "squad", "squad_v2", "wikitext", "wikipedia", "bookcorpus",
+    "imagenet", "coco", "mnist", "cifar10", "cifar100",
+    "imdb", "sst2", "mrpc", "qqp", "mnli", "qnli", "rte", "wnli",
+    "conll2003", "wmt14", "wmt16", "common_voice", "librispeech"
+]
+
 
 def _extract_dataset_id(dataset_ref: str) -> str:
     """
@@ -16,6 +24,12 @@ def _extract_dataset_id(dataset_ref: str) -> str:
     """
     if dataset_ref.startswith("http"):
         parts = dataset_ref.rstrip("/").split("/")
+        # For HuggingFace dataset URLs, extract the dataset ID
+        if "datasets" in parts:
+            idx = parts.index("datasets")
+            if idx + 1 < len(parts):
+                # Return everything after 'datasets'
+                return "/".join(parts[idx+1:])
         if len(parts) >= 2:
             return "/".join(parts[-2:])  # owner/name
     return dataset_ref  # already looks like owner/name
@@ -34,8 +48,24 @@ def _score_dataset(dataset_id: str) -> float:
 
         return card_score + downloads_score + likes_score
     except Exception as e:
-        logger.error(f"Failed to get info for dataset {dataset_id}: {e}")
+        logger.debug(f"Failed to get info for dataset {dataset_id}: {e}")
         return 0.0
+
+
+def _find_well_known_datasets(resource: dict, readme_text: str = "") -> list[str]:
+    """
+    Search for well-known dataset names in the model name, URL, or README text.
+    Returns list of dataset IDs that match.
+    """
+    name = resource.get("name", "").lower()
+    url = resource.get("url", "").lower()
+    text = f"{name} {url} {readme_text.lower()}"
+    
+    found = []
+    for ds in WELL_KNOWN_DATASETS:
+        if ds in text:
+            found.append(ds)
+    return found
 
 
 # ---------------------------------------------------------------------
@@ -78,10 +108,16 @@ def metric(resource: dict[str, Any]) -> tuple[float, int]:
     # For MODELS and DATASETS: search for dataset references
     try:
         datasets, _ = find_datasets_from_resource(resource)
-        print(f"DEBUG dataset_quality: found {len(datasets)} datasets")
+        print(f"DEBUG dataset_quality: found {len(datasets)} datasets from README")
     except Exception as e:
         print(f"DEBUG dataset_quality: find_datasets failed: {e}")
         datasets = []
+
+    # Also check for well-known dataset names in model name/URL
+    well_known = _find_well_known_datasets(resource)
+    if well_known:
+        print(f"DEBUG dataset_quality: found {len(well_known)} well-known datasets: {well_known}")
+        datasets.extend(well_known)
 
     if datasets:
         # Score all found datasets and take the max (best-case quality)
@@ -93,4 +129,3 @@ def metric(resource: dict[str, Any]) -> tuple[float, int]:
 
     latency_ms = int((time.perf_counter() - start_time) * 1000)
     return score, latency_ms
-

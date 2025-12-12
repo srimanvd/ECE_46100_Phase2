@@ -315,7 +315,7 @@ async def get_lineage(id: str):
     nodes = []
     edges = []
     
-    # Add the model itself as a node - use Pydantic attributes
+    # Add the model itself as a node
     model_name = pkg.metadata.name if pkg.metadata else id
     nodes.append({
         "id": id,
@@ -324,13 +324,15 @@ async def get_lineage(id: str):
     })
     
     # Get all packages to find related datasets/code
+    # list_packages returns PackageMetadata objects directly, not Package objects
     all_packages = storage.list_packages([], 0, 1000)
     
     # Add related packages as nodes and create edges
-    for other_pkg in all_packages:
-        other_id = other_pkg.metadata.id if other_pkg.metadata else ""
-        other_type = other_pkg.metadata.type if other_pkg.metadata else "code"
-        other_name = other_pkg.metadata.name if other_pkg.metadata else ""
+    for pkg_meta in all_packages:
+        # pkg_meta is already a PackageMetadata object
+        other_id = pkg_meta.id if pkg_meta.id else ""
+        other_type = pkg_meta.type if pkg_meta.type else "code"
+        other_name = pkg_meta.name if pkg_meta.name else ""
         
         if other_id != id:
             nodes.append({
@@ -355,16 +357,18 @@ async def get_global_lineage():
     edges = []
     
     # Get all packages
+    # list_packages returns PackageMetadata objects directly
     all_packages = storage.list_packages([], 0, 1000)
     
     models = []
     datasets = []
     code_pkgs = []
     
-    for pkg in all_packages:
-        pkg_id = pkg.metadata.id if pkg.metadata else ""
-        pkg_type = pkg.metadata.type if pkg.metadata else "code"
-        pkg_name = pkg.metadata.name if pkg.metadata else ""
+    for pkg_meta in all_packages:
+        # pkg_meta is already a PackageMetadata object
+        pkg_id = pkg_meta.id if pkg_meta.id else ""
+        pkg_type = pkg_meta.type if pkg_meta.type else "code"
+        pkg_name = pkg_meta.name if pkg_meta.name else ""
         
         node = {"id": pkg_id, "type": pkg_type, "name": pkg_name}
         nodes.append(node)

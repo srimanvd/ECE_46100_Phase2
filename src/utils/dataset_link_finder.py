@@ -160,27 +160,41 @@ def _extract_urls_from_html(html_text: str) -> list[str]:
 
 
 def _normalize_hf_dataset_url(url_or_owner_name: str) -> str | None:
-    """Normalize discovered candidate into https://huggingface.co/datasets/owner/name format if possible."""
+    """Normalize discovered candidate into https://huggingface.co/datasets/owner/name format if possible.
+    
+    ONLY accepts:
+    - URLs with explicit /datasets/ path (e.g., huggingface.co/datasets/squad)
+    - owner/name patterns when they appear near 'dataset' keywords
+    
+    Does NOT accept model URLs (huggingface.co/bert-base-uncased).
+    """
     if not url_or_owner_name:
         return None
-    # If it's already an HF datasets URL
+    
     try:
         parsed = urlparse(url_or_owner_name)
-        if parsed.scheme and parsed.netloc and parsed.netloc.lower() in HF_DATASETS_HOSTS:
-            # paths like /datasets/owner/name or /owner/name (rare)
-            path_parts = [p for p in parsed.path.split("/") if p]
-            if len(path_parts) >= 3 and path_parts[0].lower() == "datasets":
-                owner, name = path_parts[1], path_parts[2]
-                return f"https://huggingface.co/datasets/{owner}/{name}"
-            # sometimes people link via huggingface.co/owner/name (less common)
-            if len(path_parts) >= 2:
-                owner, name = path_parts[0], path_parts[1]
-                return f"https://huggingface.co/datasets/{owner}/{name}"
-        # If input is of the form owner/name -> return hf URL
+        
+        # If it's a URL, only accept if it has /datasets/ in the path
+        if parsed.scheme and parsed.netloc:
+            if parsed.netloc.lower() in HF_DATASETS_HOSTS or parsed.netloc.lower().endswith("huggingface.co"):
+                path_parts = [p for p in parsed.path.split("/") if p]
+                # ONLY accept if first part is "datasets"
+                if len(path_parts) >= 2 and path_parts[0].lower() == "datasets":
+                    owner = path_parts[1]
+                    name = path_parts[2] if len(path_parts) >= 3 else owner
+                    return f"https://huggingface.co/datasets/{owner}/{name}" if owner != name else f"https://huggingface.co/datasets/{owner}"
+                # Reject model URLs (no /datasets/ prefix)
+                return None
+            # Reject non-HF URLs
+            return None
+        
+        # If it's a bare owner/name pattern (not a URL), accept it
+        # These are only captured when near 'dataset' keywords anyway
         m = OWNER_DATASET_RE.search(url_or_owner_name)
         if m:
             owner_name = m.group(1)
             return f"https://huggingface.co/datasets/{owner_name}"
+            
     except Exception:
         return None
     return None
