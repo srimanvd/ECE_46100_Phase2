@@ -51,20 +51,21 @@ async def reset_registry():
 
 @router.get("/package/{id}", response_model=Package, status_code=status.HTTP_200_OK)
 async def get_package(id: str):
+    print(f"DEBUG: get_package called with id={id}")
     pkg = storage.get_package(id)
     if not pkg:
+        print(f"DEBUG: get_package - package not found: {id}")
         raise HTTPException(status_code=404, detail="Package not found")
     
     # If URL is missing (uploaded content), generate a pre-signed URL for download
     if not pkg.data.url and pkg.data.content:
-         # We can't easily generate a pre-signed URL for "content" unless it's in S3 as a file.
-         # S3Storage stores it as {id}.zip.
-         # Let's ask storage to generate a URL.
+         print(f"DEBUG: get_package - generating download URL for {id}")
          if hasattr(storage, "get_download_url"):
              url = storage.get_download_url(id)
              if url:
                  pkg.data.url = url
-                 
+                 print(f"DEBUG: get_package - generated URL: {url[:50]}...")
+                  
     return pkg
 
 @router.get("/artifact/model/{id}", response_model=Package, status_code=status.HTTP_200_OK)
@@ -109,8 +110,28 @@ async def upload_package(package: PackageData, x_authorization: str | None = Hea
              # Use repo name only (not owner/repo) to match autograder expectations
              name = package.url.rstrip("/").split("/")[-1]
         
+        # Fetch README for HuggingFace models (for regex search)
+        readme_content = ""
+        if "huggingface.co" in package.url:
+            try:
+                from huggingface_hub import hf_hub_download
+                model_id = package.url.split("huggingface.co/")[-1].strip("/")
+                readme_path = hf_hub_download(repo_id=model_id, filename="README.md")
+                with open(readme_path, encoding="utf-8") as f:
+                    readme_content = f.read()
+            except Exception as e:
+                print(f"DEBUG: Failed to fetch README for {package.url}: {e}")
+        
         metadata = PackageMetadata(name=name, version="1.0.0", id=pkg_id, type=package_type)
-        new_pkg = Package(metadata=metadata, data=package)
+        # Store README in package data
+        package_with_readme = PackageData(
+            url=package.url,
+            name=package.name,
+            content=package.content,
+            jsprogram=package.jsprogram,
+            readme=readme_content
+        )
+        new_pkg = Package(metadata=metadata, data=package_with_readme)
         storage.add_package(new_pkg)
         return new_pkg
 
