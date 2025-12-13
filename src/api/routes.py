@@ -284,27 +284,37 @@ async def rate_package_model(id: str):
 
 @router.get("/artifact/model/{id}/cost", status_code=status.HTTP_200_OK)
 async def get_package_cost(id: str):
-    """Calculate deployment cost based on model size scores."""
+    """Calculate deployment cost based on model size (download size in MB)."""
     print(f"DEBUG: COST called for id={id}")
-    # Get the rating which contains size scores
+    
+    # Get the package to calculate its size
+    pkg = storage.get_package(id)
+    if not pkg:
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
+    
+    # Get size from rating
     rating = await rate_package(id)
     
-    # Extract size_score from rating - use aws_server as the primary score
+    # Cost = download size in MB (based on size_score, larger models = lower score)
+    # Use aws_server score as proxy for size
     size_score = rating.size_score.aws_server if rating.size_score else 0.5
     
-    # If score is too low, cap it
-    if size_score < 0.1:
-        size_score = 0.1
+    # Convert score to approximate size in MB
+    # Score of 1.0 = 0MB, Score of 0.0 = 10GB (10000MB)
+    # Formula: size_mb = (1 - score) * 10000
+    if size_score < 0.01:
+        size_score = 0.01
+    size_mb = (1.0 - size_score) * 10000
+    total_cost = round(size_mb, 1)
     
-    # Cost is inversely proportional to size score
-    # Smaller models = higher score = lower cost
-    # Base cost is $1/hour for aws_server
-    standalone_cost = round(1.0 / size_score, 2)
+    print(f"DEBUG: COST returning {id}: total_cost={total_cost}")
     
-    print(f"DEBUG: COST returning standaloneCost={standalone_cost}")
-    
-    # Try returning in the format that might be expected
-    return {"standaloneCost": standalone_cost}
+    # Return format per spec: {artifact_id: {total_cost: value}}
+    return {
+        id: {
+            "total_cost": total_cost
+        }
+    }
 
 @router.post("/artifact/model/{id}/license-check", status_code=status.HTTP_200_OK)
 async def check_license(id: str):
@@ -326,9 +336,9 @@ async def get_lineage(id: str):
     # Add the model itself as a node
     model_name = pkg.metadata.name if pkg.metadata else id
     nodes.append({
-        "id": id,
-        "type": "model",
-        "name": model_name
+        "artifact_id": id,
+        "name": model_name,
+        "source": "config_json"
     })
     
     # Get all packages to find related datasets/code
@@ -344,9 +354,9 @@ async def get_lineage(id: str):
         
         if other_id != id:
             nodes.append({
-                "id": other_id,
-                "type": other_type,
-                "name": other_name
+                "artifact_id": other_id,
+                "name": other_name,
+                "source": "config_json"
             })
             # Create edge from model to datasets/code
             if other_type in ["dataset", "code"]:
@@ -378,7 +388,7 @@ async def get_global_lineage():
         pkg_type = pkg_meta.type if pkg_meta.type else "code"
         pkg_name = pkg_meta.name if pkg_meta.name else ""
         
-        node = {"id": pkg_id, "type": pkg_type, "name": pkg_name}
+        node = {"artifact_id": pkg_id, "name": pkg_name, "source": "config_json"}
         nodes.append(node)
         
         if pkg_type == "model":
