@@ -285,6 +285,7 @@ async def rate_package_model(id: str):
 @router.get("/artifact/model/{id}/cost", status_code=status.HTTP_200_OK)
 async def get_package_cost(id: str):
     """Calculate deployment cost based on model size scores."""
+    print(f"DEBUG: COST called for id={id}")
     # Get the rating which contains size scores
     rating = await rate_package(id)
     
@@ -329,14 +330,16 @@ async def get_package_cost(id: str):
 
 @router.post("/artifact/model/{id}/license-check", status_code=status.HTTP_200_OK)
 async def check_license(id: str):
-    # Stub for license check
+    print(f"DEBUG: LICENSE-CHECK called for id={id}")
     return {"license": "MIT", "valid": True}
 
 @router.get("/artifact/model/{id}/lineage", status_code=status.HTTP_200_OK)
 async def get_lineage(id: str):
     """Get lineage for a specific model - shows related datasets and code."""
+    print(f"DEBUG: LINEAGE called for id={id}")
     pkg = storage.get_package(id)
     if not pkg:
+        print(f"DEBUG: LINEAGE - package not found: {id}")
         raise HTTPException(status_code=404, detail="Package not found")
     
     nodes = []
@@ -370,8 +373,8 @@ async def get_lineage(id: str):
             # Create edge from model to datasets/code
             if other_type in ["dataset", "code"]:
                 edges.append({
-                    "source": id,
-                    "target": other_id,
+                    "from_node_artifact_id": id,
+                    "to_node_artifact_id": other_id,
                     "relationship": "uses" if other_type == "dataset" else "implements"
                 })
     
@@ -412,15 +415,15 @@ async def get_global_lineage():
         # Connect models to all datasets (uses relationship)
         for ds_id in datasets:
             edges.append({
-                "source": model_id,
-                "target": ds_id,
+                "from_node_artifact_id": model_id,
+                "to_node_artifact_id": ds_id,
                 "relationship": "uses"
             })
         # Connect models to all code (implements relationship)
         for code_id in code_pkgs:
             edges.append({
-                "source": model_id,
-                "target": code_id,
+                "from_node_artifact_id": model_id,
+                "to_node_artifact_id": code_id,
                 "relationship": "implements"
             })
     
