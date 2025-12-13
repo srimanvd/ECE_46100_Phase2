@@ -8,6 +8,22 @@ from src.utils.dataset_link_finder import find_datasets_from_resource
 
 logger = logging.getLogger("phase1_cli")
 
+# Dataset name normalization - common variations that need mapping
+DATASET_ALIASES = {
+    'imagenet': 'imagenet-1k',
+    'imagenet1k': 'imagenet-1k',
+    'ilsvrc': 'imagenet-1k',
+    'ilsvrc2012': 'imagenet-1k',
+    'coco': 'detection-datasets/coco',
+    'mscoco': 'detection-datasets/coco',
+}
+
+
+def _normalize_dataset_id(dataset_id: str) -> str:
+    """Normalize dataset ID to handle common aliases."""
+    lower_id = dataset_id.lower().strip()
+    return DATASET_ALIASES.get(lower_id, dataset_id)
+
 
 def _extract_dataset_id(dataset_ref: str) -> str:
     """
@@ -16,35 +32,41 @@ def _extract_dataset_id(dataset_ref: str) -> str:
     """
     if dataset_ref.startswith("http"):
         parts = dataset_ref.rstrip("/").split("/")
-        # For HuggingFace dataset URLs, extract the dataset ID
         if "datasets" in parts:
             idx = parts.index("datasets")
             if idx + 1 < len(parts):
-                return "/".join(parts[idx+1:])
+                ds_id = "/".join(parts[idx+1:])
+                return _normalize_dataset_id(ds_id)
         if len(parts) >= 2:
-            return "/".join(parts[-2:])
-    return dataset_ref
+            ds_id = "/".join(parts[-2:])
+            return _normalize_dataset_id(ds_id)
+    return _normalize_dataset_id(dataset_ref)
 
 
 def _score_dataset(dataset_id: str) -> float:
     """Calculate dataset quality score for a single dataset_id."""
+    # Normalize the ID first
+    normalized_id = _normalize_dataset_id(dataset_id)
+    print(f"DEBUG dataset_quality: scoring '{dataset_id}' as '{normalized_id}'")
+    
     try:
-        info = dataset_info(dataset_id)
+        info = dataset_info(normalized_id)
         
         card_score = 0.5 if (info.cardData and "dataset_card" in info.cardData) else 0.0
         downloads_score = 0.3 if info.downloads and info.downloads > 1000 else 0.0
         likes_score = 0.2 if info.likes and info.likes > 10 else 0.0
         
-        return card_score + downloads_score + likes_score
+        score = card_score + downloads_score + likes_score
+        print(f"DEBUG dataset_quality: '{normalized_id}' score={score}")
+        return score
     except Exception as e:
-        logger.debug(f"Failed to get info for dataset {dataset_id}: {e}")
+        logger.debug(f"Failed to get info for dataset {normalized_id}: {e}")
         return 0.0
 
 
 def _get_datasets_from_model_card(url: str) -> list[str]:
     """
     Get datasets directly from the model's HuggingFace card data.
-    This is the most reliable source - it's what the model author specified.
     """
     if "huggingface.co" not in url:
         return []
@@ -76,9 +98,6 @@ def find_dataset_url_from_hf(model_name: str) -> str | None:
 def metric(resource: dict[str, Any]) -> tuple[float, int]:
     """
     Dataset quality metric.
-    
-    For MODELS: Gets datasets from model card data or README
-    For CODE: Returns 0
     """
     start_time = time.perf_counter()
     score = 0.0
