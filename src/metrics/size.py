@@ -130,10 +130,10 @@ def metric(resource: dict[str, Any]) -> tuple[dict[str, float], int]:
         size_gb = size_bytes / (1024 ** 3)
         
         scores = {
-            "raspberry_pi": normalize(size_gb, 0.0, 1.0),
-            "jetson_nano": normalize(size_gb, 0.0, 2.0),
-            "desktop_pc": normalize(size_gb, 0.0, 6.0),
-            "aws_server": normalize(size_gb, 0.0, 10.0),
+            "raspberry_pi": normalize(size_gb, 0.0, 4.0),    # ~4GB RAM limit
+            "jetson_nano": normalize(size_gb, 0.0, 8.0),     # ~8GB RAM limit
+            "desktop_pc": normalize(size_gb, 0.0, 32.0),     # ~32GB RAM typical
+            "aws_server": normalize(size_gb, 0.0, 100.0),    # ~100GB+ for cloud
         }
         
         print(f"DEBUG SIZE: Returning scores={scores}")

@@ -52,11 +52,24 @@ def _score_dataset(dataset_id: str) -> float:
     try:
         info = dataset_info(normalized_id)
         
-        card_score = 0.5 if (info.cardData and "dataset_card" in info.cardData) else 0.0
-        downloads_score = 0.3 if info.downloads and info.downloads > 1000 else 0.0
-        likes_score = 0.2 if info.likes and info.likes > 10 else 0.0
+        # Base score for dataset existing on HuggingFace
+        base_score = 0.5
         
-        score = card_score + downloads_score + likes_score
+        # Bonus for having card data
+        card_bonus = 0.2 if info.cardData else 0.0
+        
+        # Bonus for downloads (more generous thresholds)
+        downloads_bonus = 0.0
+        if info.downloads:
+            if info.downloads > 100:
+                downloads_bonus = 0.15
+            if info.downloads > 10000:
+                downloads_bonus = 0.25
+        
+        # Bonus for likes (more generous)
+        likes_bonus = 0.1 if info.likes and info.likes > 5 else 0.0
+        
+        score = min(1.0, base_score + card_bonus + downloads_bonus + likes_bonus)
         print(f"DEBUG dataset_quality: '{normalized_id}' score={score}")
         return score
     except Exception as e:
