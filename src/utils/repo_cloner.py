@@ -110,7 +110,9 @@ def clone_repo_to_temp(repo_url: str) -> str:
         try:
             temp_dir = tempfile.mkdtemp()
             logger.info(f"Cloning {repo_url} to {temp_dir}")
-            Repo.clone_from(repo_url, temp_dir, depth=1)
+            # Use depth=100 to get enough commit history for bus_factor
+            # (depth=1 only gets 1 commit which gives bus_factor=0)
+            Repo.clone_from(repo_url, temp_dir, depth=100)
             return temp_dir
         except Exception as e:
             logger.warning(f"Git clone failed: {e}. Falling back to zip download.")
