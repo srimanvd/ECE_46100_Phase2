@@ -19,6 +19,10 @@ from src.services.storage import storage
 
 router = APIRouter()
 
+# --- Rating Cache ---
+# Cache rating results to avoid re-computing on repeated requests
+rating_cache: dict[str, PackageRating] = {}
+
 # --- Helper ---
 def generate_id() -> str:
     return str(uuid.uuid4())
@@ -47,6 +51,7 @@ async def get_packages_alias(queries: list[PackageQuery], offset: str | None = Q
 @router.delete("/reset", status_code=status.HTTP_200_OK)
 async def reset_registry():
     storage.reset()
+    rating_cache.clear()  # Clear rating cache on reset
     return {"message": "Registry is reset."}
 
 @router.get("/package/{id}", response_model=Package, status_code=status.HTTP_200_OK)
@@ -235,6 +240,12 @@ async def list_packages_model_slash():
 
 @router.get("/package/{id}/rate", response_model=PackageRating, status_code=status.HTTP_200_OK)
 async def rate_package(id: str):
+    # Check cache first
+    if id in rating_cache:
+        print(f"DEBUG: Rate cache HIT for {id}")
+        return rating_cache[id]
+    
+    print(f"DEBUG: Rate cache MISS for {id}, computing...")
     pkg = storage.get_package(id)
     if not pkg:
         raise HTTPException(status_code=404, detail="Package not found")
@@ -242,7 +253,7 @@ async def rate_package(id: str):
     if pkg.data.url:
         rating = compute_package_rating(pkg.data.url)
         # Map to snake_case
-        return PackageRating(
+        result = PackageRating(
             bus_factor=rating.bus_factor,
             bus_factor_latency=rating.bus_factor_latency,
             code_quality=rating.code_quality,
@@ -274,8 +285,11 @@ async def rate_package(id: str):
             name=pkg.metadata.name,
             category=pkg.metadata.type.lower() if pkg.metadata.type else "code"
         )
+        # Cache the result
+        rating_cache[id] = result
+        return result
     
-    return PackageRating(
+    result = PackageRating(
         bus_factor=0, bus_factor_latency=0,
         code_quality=0, code_quality_latency=0,
         ramp_up_time=0, ramp_up_time_latency=0,
@@ -293,6 +307,9 @@ async def rate_package(id: str):
         name=pkg.metadata.name,
         category=pkg.metadata.type.lower() if pkg.metadata.type else "code"
     )
+    # Cache non-URL packages too
+    rating_cache[id] = result
+    return result
 
 @router.get("/artifact/model/{id}/rate", response_model=PackageRating, status_code=status.HTTP_200_OK)
 async def rate_package_model(id: str):
@@ -375,12 +392,21 @@ async def get_lineage(id: str):
                 "name": other_name,
                 "source": "config_json"
             })
-            # Create edge from model to datasets/code
-            if other_type in ["dataset", "code"]:
+            # Create edges based on relationship type per spec
+            # Per spec example: base_model relationship from base TO derived
+            if other_type == "model":
+                # Other models could be base models for this one
                 edges.append({
-                    "from_node_artifact_id": id,
-                    "to_node_artifact_id": other_id,
-                    "relationship": "uses" if other_type == "dataset" else "implements"
+                    "from_node_artifact_id": other_id,
+                    "to_node_artifact_id": id,
+                    "relationship": "base_model"
+                })
+            elif other_type == "dataset":
+                # Datasets used to train/finetune this model
+                edges.append({
+                    "from_node_artifact_id": other_id,
+                    "to_node_artifact_id": id,
+                    "relationship": "fine_tuning_dataset"
                 })
     
     return {"nodes": nodes, "edges": edges}
