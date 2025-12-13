@@ -12,6 +12,7 @@ class PackageMetadata(BaseModel):
 class PackageData(BaseModel):
     content: str | None = Field(None, description="Base64 encoded zip file content")
     url: str | None = Field(None, description="Package URL (for ingest)")
+    download_url: str | None = Field(None, description="Direct download link served by server")
     jsprogram: str | None = Field(None, description="JavaScript program for sensitive modules")
     name: str | None = Field(None, description="Package name (optional)")
     readme: str | None = Field(None, description="Package README content")

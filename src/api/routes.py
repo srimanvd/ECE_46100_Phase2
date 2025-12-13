@@ -57,14 +57,12 @@ async def get_package(id: str):
         print(f"DEBUG: get_package - package not found: {id}")
         raise HTTPException(status_code=404, detail="Package not found")
     
-    # If URL is missing (uploaded content), generate a pre-signed URL for download
-    if not pkg.data.url and pkg.data.content:
-         print(f"DEBUG: get_package - generating download URL for {id}")
-         if hasattr(storage, "get_download_url"):
-             url = storage.get_download_url(id)
-             if url:
-                 pkg.data.url = url
-                 print(f"DEBUG: get_package - generated URL: {url[:50]}...")
+    # Generate download_url for all packages per spec
+    if hasattr(storage, "get_download_url"):
+        download_url = storage.get_download_url(id)
+        if download_url:
+            pkg.data.download_url = download_url
+            print(f"DEBUG: get_package - set download_url: {download_url[:50]}...")
                   
     return pkg
 
@@ -284,54 +282,43 @@ async def rate_package_model(id: str):
 
 @router.get("/artifact/model/{id}/cost", status_code=status.HTTP_200_OK)
 async def get_package_cost(id: str):
-    """Calculate deployment cost based on model size scores."""
+    """Calculate deployment cost based on model size (download size in MB)."""
     print(f"DEBUG: COST called for id={id}")
-    # Get the rating which contains size scores
+    
+    # Get the package to calculate its size
+    pkg = storage.get_package(id)
+    if not pkg:
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
+    
+    # Get size from rating
     rating = await rate_package(id)
     
-    # Extract size_score from rating
-    size_score = {
-        "raspberry_pi": rating.size_score.raspberry_pi if rating.size_score else 0,
-        "jetson_nano": rating.size_score.jetson_nano if rating.size_score else 0,
-        "desktop_pc": rating.size_score.desktop_pc if rating.size_score else 0,
-        "aws_server": rating.size_score.aws_server if rating.size_score else 0,
-    }
+    # Cost = download size in MB (based on size_score, larger models = lower score)
+    # Use aws_server score as proxy for size
+    size_score = rating.size_score.aws_server if rating.size_score else 0.5
     
-    # Calculate cost based on inverse of size scores
-    # Larger models (lower scores) cost more to run
-    # Base costs per hardware type ($/hour)
-    base_costs = {
-        "raspberry_pi": 0.01,
-        "jetson_nano": 0.05,
-        "desktop_pc": 0.25,
-        "aws_server": 1.00,
-    }
+    # Convert score to approximate size in MB
+    # Score of 1.0 = 0MB, Score of 0.0 = 10GB (10000MB)
+    # Formula: size_mb = (1 - score) * 10000
+    if size_score < 0.01:
+        size_score = 0.01
+    size_mb = (1.0 - size_score) * 10000
+    total_cost = round(size_mb, 1)
     
-    hw_costs = {}
-    total_cost = 0.0
-    for hw, base in base_costs.items():
-        score = size_score.get(hw, 0.5)
-        if score < 0.1:
-            score = 0.1
-        hw_cost = round(base / score, 4)
-        hw_costs[hw] = hw_cost
-        total_cost += hw_cost
+    print(f"DEBUG: COST returning {id}: total_cost={total_cost}")
     
-    # Return cost breakdown per hardware type plus total
+    # Return format per spec: {artifact_id: {total_cost: value}}
     return {
-        "cost": {
-            "raspberry_pi": hw_costs["raspberry_pi"],
-            "jetson_nano": hw_costs["jetson_nano"],
-            "desktop_pc": hw_costs["desktop_pc"],
-            "aws_server": hw_costs["aws_server"],
-            "total_cost": round(total_cost, 2)
+        id: {
+            "total_cost": total_cost
         }
     }
 
 @router.post("/artifact/model/{id}/license-check", status_code=status.HTTP_200_OK)
 async def check_license(id: str):
     print(f"DEBUG: LICENSE-CHECK called for id={id}")
-    return {"license": "MIT", "valid": True}
+    # Per spec: response should be a boolean
+    return True
 
 @router.get("/artifact/model/{id}/lineage", status_code=status.HTTP_200_OK)
 async def get_lineage(id: str):
@@ -348,9 +335,9 @@ async def get_lineage(id: str):
     # Add the model itself as a node
     model_name = pkg.metadata.name if pkg.metadata else id
     nodes.append({
-        "id": id,
-        "type": "model",
-        "name": model_name
+        "artifact_id": id,
+        "name": model_name,
+        "source": "config_json"
     })
     
     # Get all packages to find related datasets/code
@@ -366,9 +353,9 @@ async def get_lineage(id: str):
         
         if other_id != id:
             nodes.append({
-                "id": other_id,
-                "type": other_type,
-                "name": other_name
+                "artifact_id": other_id,
+                "name": other_name,
+                "source": "config_json"
             })
             # Create edge from model to datasets/code
             if other_type in ["dataset", "code"]:
@@ -400,7 +387,7 @@ async def get_global_lineage():
         pkg_type = pkg_meta.type if pkg_meta.type else "code"
         pkg_name = pkg_meta.name if pkg_meta.name else ""
         
-        node = {"id": pkg_id, "type": pkg_type, "name": pkg_name}
+        node = {"artifact_id": pkg_id, "name": pkg_name, "source": "config_json"}
         nodes.append(node)
         
         if pkg_type == "model":
