@@ -64,14 +64,16 @@ class LocalStorage:
     def search_by_regex(self, regex: str) -> list[PackageMetadata]:
         import re
         try:
-            pattern = re.compile(regex)
+            pattern = re.compile(regex, re.IGNORECASE)  # Case insensitive
         except re.error:
             return []
         
         matches = []
         for pkg in self.packages.values():
             # Search in name and readme
-            if pattern.search(pkg.metadata.name) or pattern.search(pkg.data.readme or ""):
+            name_match = pattern.search(pkg.metadata.name) if pkg.metadata.name else False
+            readme_match = pattern.search(pkg.data.readme) if pkg.data.readme else False
+            if name_match or readme_match:
                 matches.append(pkg.metadata)
         return matches
 
@@ -226,8 +228,9 @@ class S3Storage:
 
     def search_by_regex(self, regex: str) -> list[PackageMetadata]:
         import re
+        print(f"DEBUG: S3 search_by_regex called with pattern: {regex}")
         try:
-            pattern = re.compile(regex)
+            pattern = re.compile(regex, re.IGNORECASE)  # Case insensitive
         except re.error:
             return []
         
@@ -243,10 +246,16 @@ class S3Storage:
                 if not pkg:
                     continue
                 
+                name_match = pattern.search(pkg.metadata.name) if pkg.metadata.name else False
+                readme_match = pattern.search(pkg.data.readme) if pkg.data.readme else False
+                
+                print(f"DEBUG: S3 regex check: name={pkg.metadata.name}, name_match={bool(name_match)}, readme_len={len(pkg.data.readme or '')}, readme_match={bool(readme_match)}")
+                
                 # Search in name and readme
-                if pattern.search(pkg.metadata.name) or pattern.search(pkg.data.readme or ""):
+                if name_match or readme_match:
                     matches.append(pkg.metadata)
                     
+        print(f"DEBUG: S3 search_by_regex found {len(matches)} matches")
         return matches
 
     def get_download_url(self, package_id: str) -> str | None:
